@@ -1,0 +1,155 @@
+// Bond MVP schema
+// One user -> many identities (Professional, Friend, Client, etc.) -> many connections.
+// Deliberately no CRM fields, no relationship-health scoring, no smart
+// reminders, no AI. Those belong to later phases per the product brief.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // maps to Clerk auth user
+  username  String   @unique // powers bond.app/username — treat as permanent once an accessory is activated
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identities      Identity[]
+  connectionsMade Connection[] @relation("Owner") // people this user has met
+  pendingConnections PendingConnection[] // interactions from before I had a Bond account, waiting to be claimed
+  usernameLocked  Boolean      @default(false) // true once first accessory is activated/ordered
+
+  // Growth loop: username of whoever's "Create your own Bond" link brought
+  // this person here. Plain string, not a FK — we only need it for simple
+  // attribution counts ("N people signed up through me"), not relational
+  // integrity, and a string survives even if the referrer later renames.
+  referredBy String?
+}
+
+// A user can hold several Identities — Professional, Friend, Client, etc.
+// Each is a full standalone object with its own permanent URL:
+// bond.app/username/slug. Exactly one is marked isDefault, which is what
+// bond.app/username (no slug) shows — that's the ONLY thing "active
+// identity" controls: what a brand-new tap or scan sees.
+//
+// Once someone saves a contact, the link they keep is the specific
+// bond.app/username/slug URL for whichever identity was shown to them —
+// not the generic default URL. So switching your active identity only
+// ever affects new people; anyone who already has your saved contact
+// keeps seeing exactly what was shared with them, forever, with no
+// account required on their end. Editing an identity's fields (photo,
+// about, links, and later blocks like AI or booking) DOES propagate to
+// everyone already connected to it — it's the same living object, just
+// reached through a permanent door.
+model Identity {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  slug      String   // unique per user, e.g. "professional", "friend" — permanent once shared
+  label     String   // display name for the identity itself, e.g. "Professional"
+  isDefault Boolean  @default(false)
+
+  // Identity Builder blocks
+  photoUrl    String?
+  name        String
+  headline    String? // e.g. "Founder, Building Bond" or "Photographer & bad puns"
+  about       String? // short bio, plain text
+  whatsapp    String?
+  phone       String?
+  email       String?
+  linkedin    String?
+  instagram   String?
+  github      String?
+  portfolio   String?
+  resumeUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connections Connection[]
+  pendingUses PendingConnection[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+}
+
+// Created when a visitor who ISN'T signed in saves a contact. Keyed to an
+// anonymous browser token (localStorage) rather than a real User, since we
+// have no account for them yet. If they later sign up from that same
+// browser, /api/pending-connections/claim converts these into real
+// Connections under their new account — see "Connection Upgrade": no
+// interaction should be lost just because they didn't have a Bond yet.
+model PendingConnection {
+  id        String @id @default(cuid())
+  anonToken String
+
+  bondOwnerId String
+  bondOwner   User     @relation(fields: [bondOwnerId], references: [id], onDelete: Cascade)
+  identityId  String
+  identity    Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  personName     String
+  personPhoto    String?
+  personHeadline String?
+  personUsername String?
+  meetingContext String?
+  identityShared String?
+
+  createdAt DateTime @default(now())
+
+  @@index([anonToken])
+}
+
+// A Connection is created on the VISITOR's account when they save a
+// contact from someone else's Bond identity. It references the specific
+// Identity that was shared (identityId), not just a label — so if that
+// identity gains new blocks later (AI, booking, etc.), the connection
+// automatically benefits, per "Future Features" in the product brief.
+// The meeting context itself (where/when/which identity) never changes —
+// it's the permanent story of the relationship, separate from whatever
+// the identity's content becomes later.
+model Connection {
+  id        String   @id @default(cuid())
+
+  ownerId   String   // the person who saved the contact (visitor)
+  owner     User     @relation("Owner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  identityId String?  // the specific Identity that was shared — nullable in case it's later deleted
+  identity   Identity? @relation(fields: [identityId], references: [id], onDelete: SetNull)
+
+  // Snapshot of the met person's public info at time of save, so the
+  // connection still reads fine even if the identity above is ever deleted.
+  personName    String
+  personPhoto   String?
+  personHeadline String?
+  personUsername String? // bond.app/username of the person met, if they have one
+
+  meetingContext String?  // "Startup Event" | "Client" | "College" | "Friend" | "Conference" | "Other"
+  identityShared String?  // label of the identity at time of save, e.g. "Founder" — permanent, doesn't follow renames
+  note           String?  // optional free text, kept short in UI
+  meetingSource  String   @default("nfc") // "nfc" | "qr" | "link"
+
+  createdAt DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+// Lightweight event log for the analytics block (profile views, saves, opens)
+// and for growth-loop attribution counts. Kept generic and cheap to write;
+// no BI system needed for MVP.
+model ProfileEvent {
+  id        String   @id @default(cuid())
+  profileUsername String   // denormalized for fast lookups without a join
+  type      String   // "view" | "contact_save" | "bond_pass_save" | "referral_signup"
+  createdAt DateTime @default(now())
+
+  @@index([profileUsername, type])
+}
