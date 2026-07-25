@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 
 // POST is called by a VISITOR who just tapped Save Contact on someone
 // else's identity.
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ pending: true }, { status: 201 });
   }
 
-  const owner = await prisma.user.findUnique({ where: { clerkId } });
+  const owner = await getOrCreateUser();
   if (!owner) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
   const connection = await prisma.connection.create({
@@ -81,11 +82,8 @@ export async function POST(req: NextRequest) {
 // GET returns the signed-in user's connections list, newest first —
 // powers the dashboard "Connections" view.
 export async function GET() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const owner = await prisma.user.findUnique({ where: { clerkId } });
-  if (!owner) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  const owner = await getOrCreateUser();
+  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const connections = await prisma.connection.findMany({
     where: { ownerId: owner.id },

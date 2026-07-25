@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { getOrCreateUser } from "@/lib/getOrCreateUser";
 
 const EDITABLE_FIELDS = [
   "photoUrl",
@@ -18,19 +18,17 @@ const EDITABLE_FIELDS = [
   "label",
 ] as const;
 
-async function getOwnedIdentity(clerkId: string, id: string) {
-  const user = await prisma.user.findUnique({ where: { clerkId } });
+async function getOwnedIdentity(id: string) {
+  const user = await getOrCreateUser();
   if (!user) return { user: null, identity: null };
   const identity = await prisma.identity.findFirst({ where: { id, userId: user.id } });
   return { user, identity };
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { user, identity } = await getOwnedIdentity(clerkId, params.id);
-  if (!user || !identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { user, identity } = await getOwnedIdentity(params.id);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
   const data: Record<string, string | null> = {};
@@ -54,11 +52,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { user, identity } = await getOwnedIdentity(clerkId, params.id);
-  if (!user || !identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const { user, identity } = await getOwnedIdentity(params.id);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!identity) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const count = await prisma.identity.count({ where: { userId: user.id } });
   if (count <= 1) {
