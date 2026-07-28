@@ -4,20 +4,22 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { ReactNode } from "react";
 
-// The signature moment: the profile doesn't "load," it resolves — like a
-// signal locking on. A thin brass ring pulses once around the photo while
-// it sharpens from a soft blur into focus, then everything else settles in
-// behind it. This plays on every visit (not just first tap) but stays under
-// ~1s total so repeat visitors never feel like they're waiting on a screen.
+// The signature moment: the profile doesn't "load," it's stamped — like a
+// signet ring pressing into wax. The photo recedes slightly, a brass ring
+// flashes as the impression lands, then everything releases upward with a
+// small overshoot. What's left behind is a real, permanent mark: a thin
+// brass rule (see `ruleItem`) dividing headline from bio, as if the seal's
+// impression is still visible on the page. The same stamp micro-interaction
+// replays on Save Contact (see SaveContactButton) — sealing the bond.
 //
-// If you later want a "first view only" version, gate the whole sequence
-// behind a localStorage check keyed by username and skip straight to the
-// resting state (variants "visible" with no transition) on repeat views.
+// Plays on every visit (not just first tap), tuned to land under ~1s so
+// repeat visitors never feel like they're waiting on a screen. Respects
+// prefers-reduced-motion globally (see globals.css).
 
 const container = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.09, delayChildren: 0.15 },
+    transition: { staggerChildren: 0.09, delayChildren: 0.1 },
   },
 };
 
@@ -27,6 +29,17 @@ const item = {
     opacity: 1,
     y: 0,
     transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+// For elements that should "unroll" horizontally from center, like the
+// engraved rule the seal leaves behind.
+const ruleItem = {
+  hidden: { opacity: 0, scaleX: 0 },
+  visible: {
+    opacity: 1,
+    scaleX: 1,
+    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -44,16 +57,36 @@ export function ProfileReveal({
       initial="hidden"
       animate="visible"
       variants={container}
-      className="flex flex-col items-center px-6 pt-14 pb-10"
+      className="relative flex flex-col items-center px-6 pt-14 pb-10"
     >
+      {/* Ambient halo behind the medallion — barely perceptible, gives the
+          impression photo weight/presence without reading as a "glow effect." */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-14 h-40 w-40 -translate-x-1/2 rounded-full bg-brass/20 blur-2xl animate-ambient-glow"
+      />
+
       <motion.div
         variants={item}
-        className="relative mb-6 h-28 w-28 shrink-0 animate-pulse-ring rounded-full"
+        className="relative mb-6 h-28 w-28 shrink-0 rounded-full"
       >
+        {/* The stamp flash — a ring that snaps out once as the seal lands. */}
         <motion.div
-          initial={{ filter: "blur(8px)", scale: 0.92, opacity: 0 }}
-          animate={{ filter: "blur(0px)", scale: 1, opacity: 1 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 1, boxShadow: "0 0 0 0 rgba(201,161,92,0.6)" }}
+          animate={{
+            boxShadow: [
+              "0 0 0 0 rgba(201,161,92,0.6)",
+              "0 0 0 10px rgba(201,161,92,0)",
+            ],
+            opacity: [1, 0],
+          }}
+          transition={{ duration: 0.7, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute inset-0 rounded-full"
+        />
+        <motion.div
+          initial={{ scale: 0.88, y: 4, filter: "blur(6px)", opacity: 0 }}
+          animate={{ scale: [0.88, 1.06, 1], y: [4, -2, 0], filter: "blur(0px)", opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="h-28 w-28 overflow-hidden rounded-full border border-brass/40 bg-surface"
         >
           {photoUrl ? (
@@ -70,4 +103,4 @@ export function ProfileReveal({
   );
 }
 
-export { item as revealItem };
+export { item as revealItem, ruleItem };

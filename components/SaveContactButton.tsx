@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { MeetingContextModal } from "./MeetingContextModal";
 import { getAnonToken } from "@/lib/anon";
 
@@ -25,6 +26,7 @@ export function SaveContactButton({
 }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [justStamped, setJustStamped] = useState(false);
   const [passCopied, setPassCopied] = useState(false);
 
   async function handleSave() {
@@ -40,6 +42,10 @@ export function SaveContactButton({
     URL.revokeObjectURL(url);
 
     setSaved(true);
+    // Replay the same seal-stamp moment from the profile reveal — this is
+    // the bond being sealed. Self-clears so it can't get stuck rendered.
+    setJustStamped(true);
+    setTimeout(() => setJustStamped(false), 650);
     // 2. Only after the save is already in motion, offer the one optional question.
     setModalOpen(true);
   }
@@ -99,12 +105,22 @@ export function SaveContactButton({
 
   return (
     <>
-      <button
+      <motion.button
         onClick={handleSave}
-        className="w-full rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink transition active:scale-[0.98]"
+        whileTap={{ scale: 0.96 }}
+        transition={{ duration: 0.15 }}
+        className="relative w-full overflow-hidden rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink"
       >
-        {saved ? "Saved ✓" : "Save Contact"}
-      </button>
+        {justStamped && (
+          <motion.span
+            initial={{ opacity: 0.6, scale: 0.9 }}
+            animate={{ opacity: 0, scale: 1.4 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-none absolute inset-0 rounded-xl bg-ink/20"
+          />
+        )}
+        <span className="relative">{saved ? "Saved ✓" : "Save Contact"}</span>
+      </motion.button>
       {saved && (
         <button
           onClick={saveBondPass}

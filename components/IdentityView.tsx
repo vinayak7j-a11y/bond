@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { ProfileReveal } from "@/components/ProfileReveal";
-import { SaveContactButton } from "@/components/SaveContactButton";
+import { IdentityBody } from "@/components/IdentityBody";
 import { BondFooter } from "@/components/BondFooter";
 
 type IdentityRecord = {
@@ -49,57 +49,10 @@ export async function IdentityView({
   ].filter(Boolean) as { label: string; href: string }[];
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col">
+    <main className="relative mx-auto flex min-h-screen max-w-md flex-col overflow-hidden">
+      <div className="bond-grain" />
       <ProfileReveal photoUrl={identity.photoUrl} name={identity.name}>
-        <div className="flex w-full flex-col items-center text-center">
-          <div className="w-full">
-            <h1 className="font-display text-3xl text-bone">{identity.name}</h1>
-            {identity.headline && <p className="mt-1 text-sm text-slate">{identity.headline}</p>}
-            {identity.about && <p className="mt-4 text-sm leading-relaxed text-bone/80">{identity.about}</p>}
-          </div>
-
-          <div className="mt-8 w-full space-y-3">
-            <SaveContactButton
-              username={username}
-              identityId={identity.id}
-              identitySlug={identity.slug}
-              identityLabel={identity.label}
-              name={identity.name}
-              headline={identity.headline}
-              photoUrl={identity.photoUrl}
-            />
-
-            {actions.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
-                {actions.map((a) => (
-                  <a
-                    key={a.label}
-                    href={a.href}
-                    className="rounded-lg border border-white/10 bg-surface py-3 text-center text-xs text-bone transition hover:border-brass/40"
-                  >
-                    {a.label}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {socials.length > 0 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-4">
-              {socials.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-xs text-slate hover:text-brass"
-                >
-                  {s.label}
-                </a>
-              ))}
-            </div>
-          )}
-        </div>
+        <IdentityBody username={username} identity={identity} actions={actions} socials={socials} />
       </ProfileReveal>
 
       <BondFooter username={username} displayPath={displayPath} />
