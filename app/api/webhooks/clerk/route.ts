@@ -28,23 +28,33 @@ export async function POST(req: NextRequest) {
     const email = email_addresses?.[0]?.email_address ?? `${id}@bond.app`;
     const handle = username ?? id.slice(-8); // fallback so signup never hard-fails
 
-    await prisma.user.create({
-      data: {
-        clerkId: id,
-        username: handle,
-        email,
-        // Every account starts with one default identity so bond.app/username
-        // always resolves to something immediately after signup.
-        identities: {
-          create: {
-            slug: "main",
-            label: "Main",
-            isDefault: true,
-            name: first_name || handle,
+    // getOrCreateUser (lib/getOrCreateUser.ts) may already have created this
+    // row as a fallback if the browser hit an authenticated API route before
+    // this webhook delivery arrived — that's an expected race, not an error.
+    const existing = await prisma.user.findUnique({ where: { clerkId: id } });
+    if (!existing) {
+      try {
+        await prisma.user.create({
+          data: {
+            clerkId: id,
+            username: handle,
+            email,
+            // Every account starts with one default identity so bond.app/username
+            // always resolves to something immediately after signup.
+            identities: {
+              create: {
+                slug: "main",
+                label: "Main",
+                isDefault: true,
+                name: first_name || handle,
+              },
+            },
           },
-        },
-      },
-    });
+        });
+      } catch (err) {
+        console.error("Clerk webhook: user.created race, getOrCreateUser likely won it:", err);
+      }
+    }
   }
 
   return NextResponse.json({ received: true });
