@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BondPreview } from "@/components/BondPreview";
 
 type Identity = {
   id: string;
@@ -179,7 +180,7 @@ export default function DashboardPage() {
   const active = identities.find((i) => i.id === activeId);
 
   return (
-    <main className="mx-auto max-w-lg px-6 py-12">
+    <main className="mx-auto max-w-5xl px-6 py-12">
       <div className="mb-6 flex items-baseline justify-between">
         <h1 className="font-display text-3xl text-bone">Your Bond</h1>
         {username && (
@@ -220,65 +221,82 @@ export default function DashboardPage() {
       </div>
 
       {active && (
-        <>
-          <p className="mb-6 text-xs text-slate">
-            Your accessories always open the same link - bond.app/{username}. Whichever
-            identity is marked "showing now" is what anyone sees when they tap or scan. Switch
-            it any time; every accessory updates instantly, nothing to reprogram. People who've
-            already saved your contact keep seeing whatever you showed them at the time -
-            switching here only changes what new people see.
-          </p>
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
+          <div>
+            <p className="mb-6 text-xs text-slate">
+              Your accessories always open the same link - bond.app/{username}. Whichever
+              identity is marked "showing now" is what anyone sees when they tap or scan. Switch
+              it any time; every accessory updates instantly, nothing to reprogram. People who've
+              already saved your contact keep seeing whatever you showed them at the time -
+              switching here only changes what new people see.
+            </p>
 
-          {FIELD_GROUPS.map((group) => (
-            <section key={group.title} className="mb-8">
-              <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-slate">{group.title}</h2>
-              <div className="space-y-3">
-                {group.fields.map((field) => (
-                  <input
-                    key={field}
-                    value={form[field]}
-                    onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                    placeholder={PLACEHOLDERS[field]}
-                    className="w-full rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-bone placeholder:text-slate/60 focus:border-brass/50"
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+            {FIELD_GROUPS.map((group) => (
+              <section key={group.title} className="mb-8">
+                <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-slate">{group.title}</h2>
+                <div className="space-y-3">
+                  {group.fields.map((field) => (
+                    <input
+                      key={field}
+                      value={form[field]}
+                      onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                      placeholder={PLACEHOLDERS[field]}
+                      className="w-full rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-bone placeholder:text-slate/60 focus:border-brass/50"
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
 
-          <button
-            onClick={save}
-            disabled={status === "saving"}
-            className="w-full rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
-          >
-            {status === "saved" ? "Saved" : status === "saving" ? "Saving..." : "Save changes"}
-          </button>
+            <button
+              onClick={save}
+              disabled={status === "saving"}
+              className="w-full rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink transition active:scale-[0.98] disabled:opacity-60"
+            >
+              {status === "saved" ? "Saved" : status === "saving" ? "Saving..." : "Save changes"}
+            </button>
 
-          <div className="mt-4 flex items-center justify-between text-sm">
-            {active.isDefault ? (
-              <span className="text-slate">Your accessories are currently showing this</span>
-            ) : (
-              <button onClick={makeDefault} className="text-brass hover:underline">
-                Show this instead
-              </button>
-            )}
-            {identities.length > 1 && (
-              <button onClick={deleteIdentity} className="text-slate hover:text-red-400">
-                Delete identity
-              </button>
+            <div className="mt-4 flex items-center justify-between text-sm">
+              {active.isDefault ? (
+                <span className="text-slate">Your accessories are currently showing this</span>
+              ) : (
+                <button onClick={makeDefault} className="text-brass hover:underline">
+                  Show this instead
+                </button>
+              )}
+              {identities.length > 1 && (
+                <button onClick={deleteIdentity} className="text-slate hover:text-red-400">
+                  Delete identity
+                </button>
+              )}
+            </div>
+
+            {username && (
+              <a
+                href={`/${username}${active.isDefault ? "" : `/${active.slug}`}`}
+                target="_blank"
+                className="mt-4 block text-center text-sm text-slate hover:text-brass"
+              >
+                View this identity live
+              </a>
             )}
           </div>
 
-          {username && (
-            <a 
-              href={`/${username}${active.isDefault ? "" : `/${active.slug}`}`}
-              target="_blank"
-              className="mt-4 block text-center text-sm text-slate hover:text-brass"
-            >
-              View this identity live
-            </a>
-          )}
-        </>
+          <BondPreview
+            data={{
+              label: form.label,
+              name: form.name,
+              headline: form.headline,
+              about: form.about,
+              whatsapp: form.whatsapp,
+              phone: form.phone,
+              email: form.email,
+            }}
+            username={username}
+            slug={active.slug}
+            isDefault={active.isDefault}
+          />
+        </div>
       )}
     </main>
   );
