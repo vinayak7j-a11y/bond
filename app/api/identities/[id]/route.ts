@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
+import { FieldDraft, FIELD_TYPES } from "@/lib/fieldTypes";
 
-const EDITABLE_FIELDS = [
-  "photoUrl",
-  "name",
-  "headline",
-  "about",
-  "whatsapp",
-  "phone",
-  "email",
-  "linkedin",
-  "instagram",
-  "github",
-  "portfolio",
-  "resumeUrl",
-  "label",
-] as const;
+const EDITABLE_FIELDS = ["photoUrl", "name", "label"] as const;
 
 async function getOwnedIdentity(id: string) {
   const user = await getOrCreateUser();
   if (!user) return { user: null, identity: null };
-  const identity = await prisma.identity.findFirst({ where: { id, userId: user.id } });
+  const identity = await prisma.identity.findFirst({
+    where: { id, userId: user.id },
+    include: { fields: true },
+  });
   return { user, identity };
 }
 
@@ -37,18 +27,56 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       if (field in body) data[field] = body[field] === "" ? null : body[field];
     }
 
-    // "makeDefault" is handled separately in a transaction so exactly one
-    // identity is ever marked default at a time.
+    const ops: any[] = [];
+
     if (body.makeDefault) {
-      await prisma.$transaction([
-        prisma.identity.updateMany({ where: { userId: user.id }, data: { isDefault: false } }),
-        prisma.identity.update({ where: { id: identity.id }, data: { ...data, isDefault: true } }),
-      ]);
-    } else {
-      await prisma.identity.update({ where: { id: identity.id }, data });
+      // Handled in the same transaction so exactly one identity is ever
+      // marked default at a time.
+      ops.push(prisma.identity.updateMany({ where: { userId: user.id }, data: { isDefault: false } }));
+      ops.push(prisma.identity.update({ where: { id: identity.id }, data: { ...data, isDefault: true } }));
+    } else if (Object.keys(data).length > 0) {
+      ops.push(prisma.identity.update({ where: { id: identity.id }, data }));
     }
 
-    const updated = await prisma.identity.findUnique({ where: { id: identity.id } });
+    // Full sync of this identity's fields: the client always sends the
+    // complete desired list. Anything with an existing id gets updated,
+    // anything without one is new, and any current DB row not present in
+    // the payload gets deleted. This mirrors how the dashboard already
+    // saves everything in one "Save changes" action rather than many
+    // separate field-level API calls.
+    if (Array.isArray(body.fields)) {
+      const incoming = body.fields as FieldDraft[];
+      const incomingIds = new Set(incoming.filter((f) => f.id).map((f) => f.id));
+
+      for (const existing of identity.fields) {
+        if (!incomingIds.has(existing.id)) {
+          ops.push(prisma.field.delete({ where: { id: existing.id } }));
+        }
+      }
+
+      incoming.forEach((f, index) => {
+        if (!FIELD_TYPES.includes(f.type)) return; // ignore anything malformed
+        const payload = {
+          key: f.key ?? null,
+          type: f.type,
+          label: (f.label || "Untitled").slice(0, 80),
+          value: f.value ?? "",
+          order: index,
+        };
+        if (f.id) {
+          ops.push(prisma.field.update({ where: { id: f.id }, data: payload }));
+        } else {
+          ops.push(prisma.field.create({ data: { ...payload, identityId: identity.id } }));
+        }
+      });
+    }
+
+    if (ops.length > 0) await prisma.$transaction(ops);
+
+    const updated = await prisma.identity.findUnique({
+      where: { id: identity.id },
+      include: { fields: { orderBy: { order: "asc" } } },
+    });
     return NextResponse.json({ identity: updated });
   } catch (err) {
     console.error("PUT /api/identities/[id] failed:", err);

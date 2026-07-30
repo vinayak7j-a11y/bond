@@ -5,13 +5,15 @@ import { revealItem, ruleItem } from "@/components/ProfileReveal";
 import { SaveContactButton } from "@/components/SaveContactButton";
 import { QuickActionButton } from "@/components/QuickActionButton";
 
-type Action = { label: string; href: string };
+type LabeledLink = { label: string; href: string };
+type Detail = { label: string; value: string; type: "TEXT" | "LONG_TEXT" };
 
 export function IdentityBody({
   username,
   identity,
   actions,
-  socials,
+  links,
+  details,
 }: {
   username: string;
   identity: {
@@ -23,8 +25,9 @@ export function IdentityBody({
     about: string | null;
     photoUrl: string | null;
   };
-  actions: Action[];
-  socials: Action[];
+  actions: LabeledLink[];
+  links: LabeledLink[];
+  details: Detail[];
 }) {
   return (
     <div className="flex w-full flex-col items-center text-center">
@@ -77,17 +80,34 @@ export function IdentityBody({
         )}
       </motion.div>
 
-      {socials.length > 0 && (
+      {/* Freeform fields — Skills, Achievements, or whatever the owner made
+          up. Fully owner-labeled, rendered as small labeled cards in the
+          order they set, so a "Professional" identity and a wildly
+          different custom one both look intentional rather than empty. */}
+      {details.length > 0 && (
+        <motion.div variants={revealItem} className="mt-6 w-full space-y-3 text-left">
+          {details.map((d) => (
+            <div key={d.label} className="rounded-lg border border-white/10 bg-surface px-4 py-3">
+              <p className="font-mono text-[10px] uppercase tracking-wide text-brass/70">{d.label}</p>
+              <p className={`mt-1 text-sm text-bone/80 ${d.type === "LONG_TEXT" ? "leading-relaxed" : ""}`}>
+                {d.value}
+              </p>
+            </div>
+          ))}
+        </motion.div>
+      )}
+
+      {links.length > 0 && (
         <motion.div variants={revealItem} className="mt-6 flex flex-wrap justify-center gap-4">
-          {socials.map((s) => (
+          {links.map((l) => (
             <a
-              key={s.label}
-              href={s.href}
+              key={l.label}
+              href={l.href}
               target="_blank"
               rel="noreferrer"
               className="font-mono text-xs text-slate transition hover:text-brass"
             >
-              {s.label}
+              {l.label}
             </a>
           ))}
         </motion.div>

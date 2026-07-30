@@ -2,16 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-
-type PreviewData = {
-  label: string;
-  name: string;
-  headline: string;
-  about: string;
-  whatsapp: string;
-  phone: string;
-  email: string;
-};
+import { FieldDraft, ACTION_TYPES } from "@/lib/fieldTypes";
 
 // Mirrors components/IdentityBody.tsx's visual language (engraved eyebrow,
 // serif name, brass rule, quick-actions) so editing here and viewing the
@@ -19,38 +10,56 @@ type PreviewData = {
 // (no entrance replay on every keystroke) — only the identity switch
 // animates, so typing feels instant rather than performative.
 export function BondPreview({
-  data,
+  label,
+  name,
+  fields,
   username,
   slug,
   isDefault,
 }: {
-  data: PreviewData;
+  label: string;
+  name: string;
+  fields: FieldDraft[];
   username: string;
   slug: string;
   isDefault: boolean;
 }) {
   const [pulse, setPulse] = useState(false);
 
+  const signature = JSON.stringify(fields.map((f) => [f.type, f.label, f.value]));
   useEffect(() => {
     setPulse(true);
     const t = setTimeout(() => setPulse(false), 400);
     return () => clearTimeout(t);
-  }, [data.label, data.name, data.headline, data.about, data.whatsapp, data.phone, data.email]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, label, signature]);
 
-  const actions = [
-    data.whatsapp && "WhatsApp",
-    data.phone && "Call",
-    data.email && "Email",
-  ].filter(Boolean) as string[];
+  const filled = fields.filter((f) => f.value);
+  const headline = filled.find((f) => f.key === "headline")?.value;
+  const about = filled.find((f) => f.key === "about")?.value;
+  const actions = filled.filter((f) => ACTION_TYPES.includes(f.type) && f.key !== "headline" && f.key !== "about");
+  const links = filled.filter((f) => f.type === "LINK");
+  const details = filled.filter(
+    (f) => (f.type === "TEXT" || f.type === "LONG_TEXT") && f.key !== "headline" && f.key !== "about"
+  );
 
   return (
     <div className="lg:sticky lg:top-10">
       <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-slate">
-        <span
-          className={`h-1.5 w-1.5 rounded-full transition-colors duration-300 ${
-            pulse ? "bg-brass" : "bg-slate/40"
-          }`}
-        />
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-brass/50" />
+          <AnimatePresence>
+            {pulse && (
+              <motion.span
+                initial={{ opacity: 0.6, scale: 1 }}
+                animate={{ opacity: 0, scale: 4 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="absolute inset-0 rounded-full bg-brass"
+              />
+            )}
+          </AnimatePresence>
+        </span>
         Live preview
       </div>
 
@@ -69,20 +78,20 @@ export function BondPreview({
             >
               <div className="mb-4 h-16 w-16 overflow-hidden rounded-full border border-brass/40 bg-surface">
                 <div className="flex h-full w-full items-center justify-center font-display text-xl text-brass">
-                  {(data.name || "?").charAt(0).toUpperCase()}
+                  {(name || "?").charAt(0).toUpperCase()}
                 </div>
               </div>
 
               <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.28em] text-brass/80">
-                {data.label || "Untitled"}
+                {label || "Untitled"}
               </p>
-              <h2 className="font-display text-2xl tracking-tight text-bone">{data.name || "Your name"}</h2>
-              {data.headline && <p className="mt-1 text-xs text-slate">{data.headline}</p>}
+              <h2 className="font-display text-2xl tracking-tight text-bone">{name || "Your name"}</h2>
+              {headline && <p className="mt-1 text-xs text-slate">{headline}</p>}
 
-              {data.about && (
+              {about && (
                 <>
                   <div className="my-3 h-px w-12 bg-gradient-to-r from-transparent via-brass/60 to-transparent" />
-                  <p className="text-xs leading-relaxed text-bone/80">{data.about}</p>
+                  <p className="text-xs leading-relaxed text-bone/80">{about}</p>
                 </>
               )}
 
@@ -94,15 +103,36 @@ export function BondPreview({
                   <div className="grid grid-cols-3 gap-1.5">
                     {actions.map((a) => (
                       <div
-                        key={a}
+                        key={a.label}
                         className="rounded-md border border-white/10 bg-surface py-2 text-center text-[10px] text-bone"
                       >
-                        {a}
+                        {a.label}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
+
+              {details.length > 0 && (
+                <div className="mt-4 w-full space-y-1.5 text-left">
+                  {details.map((d) => (
+                    <div key={d.label} className="rounded-md border border-white/10 bg-surface px-3 py-1.5">
+                      <p className="font-mono text-[8px] uppercase tracking-wide text-brass/70">{d.label}</p>
+                      <p className="mt-0.5 text-[10px] text-bone/80">{d.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {links.length > 0 && (
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {links.map((l) => (
+                    <span key={l.label} className="font-mono text-[9px] text-slate">
+                      {l.label}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <p className="mt-6 font-mono text-[9px] text-slate/60">
                 bond.app/{username || "you"}

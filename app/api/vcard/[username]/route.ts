@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: { username: st
 
   const user = await prisma.user.findUnique({
     where: { username: params.username },
-    include: { identities: true },
+    include: { identities: { include: { fields: { orderBy: { order: "asc" } } } } },
   });
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -19,16 +19,13 @@ export async function GET(req: NextRequest, { params }: { params: { username: st
 
   const vcard = buildVCard({
     name: identity.name,
-    headline: identity.headline,
-    phone: identity.phone,
-    email: identity.email,
-    whatsapp: identity.whatsapp,
+    photoUrl: identity.photoUrl,
+    fields: identity.fields,
     // Always the identity-specific URL. This is what makes the saved
     // contact permanent: whoever saves it keeps seeing exactly this
     // identity forever, even after the owner's active identity changes —
     // no account needed on the visitor's end for this to work.
     website: `https://bond.app/${user.username}/${identity.slug}`,
-    photoUrl: identity.photoUrl,
   });
 
   prisma.profileEvent

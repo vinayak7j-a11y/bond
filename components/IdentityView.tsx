@@ -3,6 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { ProfileReveal } from "@/components/ProfileReveal";
 import { IdentityBody } from "@/components/IdentityBody";
 import { BondFooter } from "@/components/BondFooter";
+import { ACTION_TYPES } from "@/lib/fieldTypes";
+
+type FieldRecord = {
+  id: string;
+  key: string | null;
+  type: "TEXT" | "LONG_TEXT" | "LINK" | "PHONE" | "WHATSAPP" | "EMAIL";
+  label: string;
+  value: string;
+  order: number;
+};
 
 type IdentityRecord = {
   id: string;
@@ -11,15 +21,13 @@ type IdentityRecord = {
   isDefault: boolean;
   photoUrl: string | null;
   name: string;
-  headline: string | null;
-  about: string | null;
-  whatsapp: string | null;
-  phone: string | null;
-  email: string | null;
-  linkedin: string | null;
-  instagram: string | null;
-  github: string | null;
-  portfolio: string | null;
+  fields: FieldRecord[];
+};
+
+const ACTION_HREF: Record<string, (value: string) => string> = {
+  WHATSAPP: (v) => `https://wa.me/${v.replace(/\D/g, "")}`,
+  PHONE: (v) => `tel:${v}`,
+  EMAIL: (v) => `mailto:${v}`,
 };
 
 export async function IdentityView({
@@ -35,24 +43,41 @@ export async function IdentityView({
     .create({ data: { profileUsername: `${username}/${identity.slug}`, type: "view" } })
     .catch(() => {});
 
-  const actions = [
-    identity.whatsapp && { label: "WhatsApp", href: `https://wa.me/${identity.whatsapp.replace(/\D/g, "")}` },
-    identity.phone && { label: "Call", href: `tel:${identity.phone}` },
-    identity.email && { label: "Email", href: `mailto:${identity.email}` },
-  ].filter(Boolean) as { label: string; href: string }[];
+  const fields = identity.fields.filter((f) => f.value); // never render empty fields
+  const headline = fields.find((f) => f.key === "headline")?.value ?? null;
+  const about = fields.find((f) => f.key === "about")?.value ?? null;
 
-  const socials = [
-    identity.linkedin && { label: "LinkedIn", href: identity.linkedin },
-    identity.instagram && { label: "Instagram", href: identity.instagram },
-    identity.github && { label: "GitHub", href: identity.github },
-    identity.portfolio && { label: "Portfolio", href: identity.portfolio },
-  ].filter(Boolean) as { label: string; href: string }[];
+  const actions = fields
+    .filter((f) => ACTION_TYPES.includes(f.type) && f.key !== "headline" && f.key !== "about")
+    .map((f) => ({ label: f.label, href: ACTION_HREF[f.type](f.value) }));
+
+  const links = fields.filter((f) => f.type === "LINK").map((f) => ({ label: f.label, href: f.value }));
+
+  // Freeform text fields — Skills, Achievements, "favorite food," anything
+  // the owner made up — beyond the two special headline/about slots.
+  const details = fields
+    .filter((f) => (f.type === "TEXT" || f.type === "LONG_TEXT") && f.key !== "headline" && f.key !== "about")
+    .map((f) => ({ label: f.label, value: f.value, type: f.type as "TEXT" | "LONG_TEXT" }));
 
   return (
     <main className="relative mx-auto flex min-h-screen max-w-md flex-col overflow-hidden">
       <div className="bond-grain" />
       <ProfileReveal photoUrl={identity.photoUrl} name={identity.name}>
-        <IdentityBody username={username} identity={identity} actions={actions} socials={socials} />
+        <IdentityBody
+          username={username}
+          identity={{
+            id: identity.id,
+            slug: identity.slug,
+            label: identity.label,
+            name: identity.name,
+            headline,
+            about,
+            photoUrl: identity.photoUrl,
+          }}
+          actions={actions}
+          links={links}
+          details={details}
+        />
       </ProfileReveal>
 
       <BondFooter username={username} displayPath={displayPath} />
@@ -66,7 +91,7 @@ export async function IdentityView({
 export async function loadActiveIdentity(username: string) {
   const owner = await prisma.user.findUnique({
     where: { username },
-    include: { identities: true },
+    include: { identities: { include: { fields: { orderBy: { order: "asc" } } } } },
   });
   if (!owner || owner.identities.length === 0) return null;
   return owner.identities.find((i) => i.isDefault) ?? owner.identities[0];
@@ -78,7 +103,10 @@ export async function loadActiveIdentity(username: string) {
 export async function loadIdentityBySlug(username: string, slug: string) {
   const user = await prisma.user.findUnique({ where: { username } });
   if (!user) return null;
-  return prisma.identity.findUnique({ where: { userId_slug: { userId: user.id, slug } } });
+  return prisma.identity.findUnique({
+    where: { userId_slug: { userId: user.id, slug } },
+    include: { fields: { orderBy: { order: "asc" } } },
+  });
 }
 
 export { notFound };

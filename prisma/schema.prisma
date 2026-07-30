@@ -56,19 +56,16 @@ model Identity {
   label     String   // display name for the identity itself, e.g. "Professional"
   isDefault Boolean  @default(false)
 
-  // Identity Builder blocks
-  photoUrl    String?
-  name        String
-  headline    String? // e.g. "Founder, Building Bond" or "Photographer & bad puns"
-  about       String? // short bio, plain text
-  whatsapp    String?
-  phone       String?
-  email       String?
-  linkedin    String?
-  instagram   String?
-  github      String?
-  portfolio   String?
-  resumeUrl   String?
+  photoUrl String?
+  name     String
+
+  // Everything else about an identity — headline, about, contact methods,
+  // links, resume, skills, or any custom field the owner invents — lives
+  // as Field rows instead of fixed columns. This is deliberate: a
+  // "Professional" identity and a "Just Contact" identity carry completely
+  // different information, and hardcoding one shared set of boxes for both
+  // fights the whole multi-identity premise of the product. See Field below.
+  fields Field[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -78,6 +75,40 @@ model Identity {
 
   @@unique([userId, slug])
   @@index([userId])
+}
+
+enum FieldType {
+  TEXT      // short plain text, rendered inline
+  LONG_TEXT // multi-line, rendered as a paragraph (About, Achievements, etc.)
+  LINK      // rendered as a tappable link (LinkedIn, Resume, Portfolio, anything)
+  PHONE     // rendered as a Call quick-action button
+  WHATSAPP  // rendered as a WhatsApp quick-action button
+  EMAIL     // rendered as an Email quick-action button
+}
+
+// A single piece of information on an identity. Label is always fully
+// owner-defined — "Resume", "Skills", "Favorite food", anything — while
+// `type` controls how it renders (a PHONE field becomes a tap-to-call
+// button regardless of what it's labeled). `key` is an optional stable
+// marker used only for the two special layout slots on the public profile
+// (the headline under the name, and the About paragraph with its brass
+// rule) — every other field, templated or fully custom, is unordered
+// beyond `order` and renders generically based on its type.
+model Field {
+  id         String   @id @default(cuid())
+  identityId String
+  identity   Identity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  key   String? // "headline" | "about" | null
+  type  FieldType
+  label String
+  value String
+  order Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identityId])
 }
 
 // Created when a visitor who ISN'T signed in saves a contact. Keyed to an
