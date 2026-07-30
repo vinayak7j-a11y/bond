@@ -73,8 +73,8 @@ export function IdentityBody({
 
         {actions.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
-            {actions.map((a) => (
-              <QuickActionButton key={a.label} label={a.label} href={a.href} />
+            {actions.map((a, i) => (
+              <QuickActionButton key={`${a.label}-${i}`} label={a.label} href={a.href} />
             ))}
           </div>
         )}
@@ -86,8 +86,8 @@ export function IdentityBody({
           different custom one both look intentional rather than empty. */}
       {details.length > 0 && (
         <motion.div variants={revealItem} className="mt-6 w-full space-y-3 text-left">
-          {details.map((d) => (
-            <div key={d.label} className="rounded-lg border border-white/10 bg-surface px-4 py-3">
+          {details.map((d, i) => (
+            <div key={`${d.label}-${i}`} className="rounded-lg border border-white/10 bg-surface px-4 py-3">
               <p className="font-mono text-[10px] uppercase tracking-wide text-brass/70">{d.label}</p>
               <p className={`mt-1 text-sm text-bone/80 ${d.type === "LONG_TEXT" ? "leading-relaxed" : ""}`}>
                 {d.value}
@@ -99,9 +99,9 @@ export function IdentityBody({
 
       {links.length > 0 && (
         <motion.div variants={revealItem} className="mt-6 flex flex-wrap justify-center gap-4">
-          {links.map((l) => (
+          {links.map((l, i) => (
             <a
-              key={l.label}
+              key={`${l.label}-${i}`}
               href={l.href}
               target="_blank"
               rel="noreferrer"
