@@ -128,18 +128,26 @@ export default function DashboardPage() {
   async function save() {
     if (!activeId) return;
     setStatus("saving");
-    const res = await fetch(`/api/identities/${activeId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, label, fields: buildPayload() }),
-    });
-    const data = await res.json();
-    if (data.identity) {
+    try {
+      const res = await fetch(`/api/identities/${activeId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, label, fields: buildPayload() }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.identity) {
+        setLoadError(data.error ?? "Couldn't save your changes. Try again.");
+        setStatus("idle");
+        return;
+      }
       setIdentities((prev) => prev.map((i) => (i.id === activeId ? data.identity : i)));
       setFields(toLocalFields(data.identity.fields ?? []));
+      setStatus("saved");
+      setTimeout(() => setStatus("idle"), 1500);
+    } catch {
+      setLoadError("Couldn't reach the server. Check your connection and try again.");
+      setStatus("idle");
     }
-    setStatus("saved");
-    setTimeout(() => setStatus("idle"), 1500);
   }
 
   async function makeDefault() {
@@ -150,7 +158,11 @@ export default function DashboardPage() {
       body: JSON.stringify({ name, label, fields: buildPayload(), makeDefault: true }),
     });
     const data = await res.json();
-    if (data.identity) await load();
+    if (!res.ok || !data.identity) {
+      setLoadError(data.error ?? "Couldn't switch identities. Try again.");
+      return;
+    }
+    await load();
   }
 
   async function createIdentity(newLabel: string, templateId: string) {
