@@ -37,6 +37,8 @@ export function buildVCard(input: VCardInput): string {
   // Achievements, "favorite food," anything custom) have no field at all —
   // both survive import as a single labeled NOTE instead of being dropped.
   const noteParts: string[] = [];
+  const about = input.fields.find((f) => f.key === "about" && f.value)?.value;
+  if (about) noteParts.push(`About: ${about}`);
   const whatsapp = input.fields.find((f) => f.type === "WHATSAPP" && f.value)?.value;
   if (whatsapp) noteParts.push(`WhatsApp: ${whatsapp}`);
   for (const text of input.fields.filter(
