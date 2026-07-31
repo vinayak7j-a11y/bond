@@ -5,7 +5,7 @@ export default function Page() {
   return (
     <main className="flex min-h-screen items-center justify-center">
       <ReferralParamCapture />
-      <SignUp appearance={{ variables: { colorPrimary: "#C9A15C" } }} />
+      <SignUp />
     </main>
   );
 }
