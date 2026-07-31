@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { ReactNode } from "react";
 
@@ -52,6 +52,9 @@ export function ProfileReveal({
   name: string;
   children: ReactNode;
 }) {
+  const reduceMotion = useReducedMotion();
+  const particleCount = reduceMotion ? 0 : 8;
+
   return (
     <motion.div
       initial="hidden"
@@ -70,6 +73,28 @@ export function ProfileReveal({
         variants={item}
         className="relative mb-6 h-28 w-28 shrink-0 rounded-full"
       >
+        {/* Fine brass dust scattering outward as the seal makes contact —
+            reinforces "impact" rather than just a glow fading in. */}
+        {Array.from({ length: particleCount }).map((_, i) => {
+          const angle = (i / particleCount) * Math.PI * 2;
+          const distance = 46;
+          return (
+            <motion.span
+              key={i}
+              aria-hidden
+              initial={{ opacity: 0, x: 0, y: 0, scale: 0.8 }}
+              animate={{
+                opacity: [0, 1, 0],
+                x: Math.cos(angle) * distance,
+                y: Math.sin(angle) * distance,
+                scale: [0.8, 1, 0.6],
+              }}
+              transition={{ duration: 0.55, delay: 0.32, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute left-1/2 top-1/2 h-1 w-1 rounded-full bg-brass"
+            />
+          );
+        })}
+
         {/* The stamp flash — a ring that snaps out once as the seal lands. */}
         <motion.div
           initial={{ opacity: 1, boxShadow: "0 0 0 0 rgba(201,161,92,0.6)" }}
@@ -90,7 +115,14 @@ export function ProfileReveal({
           className="h-28 w-28 overflow-hidden rounded-full border border-brass/40 bg-surface"
         >
           {photoUrl ? (
-            <Image src={photoUrl} alt={name} width={112} height={112} className="h-full w-full object-cover" />
+            <Image
+              src={photoUrl}
+              alt={name}
+              width={112}
+              height={112}
+              unoptimized
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center font-display text-3xl text-brass">
               {name.charAt(0)}
