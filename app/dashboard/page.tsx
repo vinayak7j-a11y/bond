@@ -299,6 +299,14 @@ export default function DashboardPage() {
               switching here only changes what new people see.
             </p>
 
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeId}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              >
             <section className="mb-8">
               <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-slate">Identity</h2>
               <div className="space-y-3">
@@ -429,6 +437,8 @@ export default function DashboardPage() {
                 View this identity live
               </a>
             )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <BondPreview
