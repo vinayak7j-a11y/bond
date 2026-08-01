@@ -66,6 +66,8 @@ export default function DashboardPage() {
   const [justSwitchedId, setJustSwitchedId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [creatingIdentity, setCreatingIdentity] = useState(false);
+  const [deletingIdentity, setDeletingIdentity] = useState(false);
 
   useEffect(() => {
     load();
@@ -181,32 +183,46 @@ export default function DashboardPage() {
 
   async function createIdentity(newLabel: string, templateId: string) {
     setCreateError(null);
-    const res = await fetch("/api/identities", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: newLabel, name: name || "Your name", templateId }),
-    });
-    const data = await res.json();
-    if (data.identity) {
+    setCreatingIdentity(true);
+    try {
+      const res = await fetch("/api/identities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: newLabel, name: name || "Your name", templateId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.identity) {
+        setCreateError(data.error ?? "Couldn't create that identity — try again.");
+        return;
+      }
       setNewIdentityOpen(false);
       setIdentities((prev) => [...prev, data.identity]);
       selectIdentity(data.identity);
-    } else {
-      setCreateError(data.error ?? "Couldn't create that identity — try again.");
+    } catch {
+      setCreateError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setCreatingIdentity(false);
     }
   }
 
   async function deleteIdentity() {
     if (!activeId) return;
     setDeleteError(null);
-    const res = await fetch(`/api/identities/${activeId}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.error) {
-      setDeleteError(data.error);
-      return;
+    setDeletingIdentity(true);
+    try {
+      const res = await fetch(`/api/identities/${activeId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setDeleteError(data.error ?? "Couldn't delete that identity — try again.");
+        return;
+      }
+      setDeleteOpen(false);
+      await load();
+    } catch {
+      setDeleteError("Couldn't reach the server. Check your connection and try again.");
+    } finally {
+      setDeletingIdentity(false);
     }
-    setDeleteOpen(false);
-    await load();
   }
 
   const active = identities.find((i) => i.id === activeId);
@@ -238,6 +254,7 @@ export default function DashboardPage() {
             key={i.id}
             onClick={() => selectIdentity(i)}
             whileTap={{ scale: 0.96 }}
+            aria-pressed={i.id === activeId}
             className={`relative rounded-full border px-3 py-1.5 text-xs transition ${
               i.id === activeId ? "border-brass text-brass" : "border-white/10 text-slate hover:text-bone"
             }`}
@@ -434,6 +451,7 @@ export default function DashboardPage() {
           setCreateError(null);
         }}
         error={createError}
+        pending={creatingIdentity}
       />
 
       <DeleteIdentityModal
@@ -445,6 +463,7 @@ export default function DashboardPage() {
           setDeleteError(null);
         }}
         error={deleteError}
+        pending={deletingIdentity}
       />
     </main>
   );

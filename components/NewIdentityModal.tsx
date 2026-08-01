@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TEMPLATES } from "@/lib/identityTemplates";
 
@@ -9,21 +9,38 @@ export function NewIdentityModal({
   onCreate,
   onClose,
   error,
+  pending,
 }: {
   open: boolean;
   onCreate: (label: string, templateId: string) => void;
   onClose: () => void;
   error?: string | null;
+  pending?: boolean;
 }) {
   const [label, setLabel] = useState("");
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
 
   function submit() {
     const trimmed = label.trim();
-    if (!trimmed) return;
+    if (!trimmed || pending) return;
     onCreate(trimmed, templateId);
     setLabel("");
   }
+
+  function safeClose() {
+    if (pending) return; // don't let the sheet close mid-request — avoids an orphaned in-flight create
+    onClose();
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") safeClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pending]);
 
   return (
     <AnimatePresence>
@@ -33,7 +50,7 @@ export function NewIdentityModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
-          onClick={onClose}
+          onClick={safeClose}
         >
           <motion.div
             initial={{ y: 40, opacity: 0 }}
@@ -69,7 +86,8 @@ export function NewIdentityModal({
               onChange={(e) => setLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && submit()}
               placeholder="e.g. Friend, Client, Founder"
-              className="mb-4 w-full rounded-lg border border-white/10 bg-ink px-4 py-3 text-center text-sm text-bone placeholder:text-slate/60 focus:border-brass/50"
+              disabled={pending}
+              className="mb-4 w-full rounded-lg border border-white/10 bg-ink px-4 py-3 text-center text-sm text-bone placeholder:text-slate/60 focus:border-brass/50 disabled:opacity-60"
             />
 
             <p className="mb-2 font-mono text-[10px] uppercase tracking-wide text-slate">
@@ -80,7 +98,8 @@ export function NewIdentityModal({
                 <button
                   key={t.id}
                   onClick={() => setTemplateId(t.id)}
-                  className={`rounded-lg border px-3 py-2.5 text-left transition ${
+                  disabled={pending}
+                  className={`rounded-lg border px-3 py-2.5 text-left transition disabled:opacity-60 ${
                     templateId === t.id
                       ? "border-brass bg-brass/10"
                       : "border-white/10 hover:border-white/25"
@@ -98,12 +117,12 @@ export function NewIdentityModal({
 
             <button
               onClick={submit}
-              disabled={!label.trim()}
+              disabled={!label.trim() || pending}
               className="w-full rounded-xl bg-brass px-6 py-3 text-center text-sm font-medium text-ink transition active:scale-[0.98] disabled:opacity-40"
             >
-              Create identity
+              {pending ? "Creating…" : "Create identity"}
             </button>
-            <button onClick={onClose} className="mt-3 w-full text-center text-sm text-slate hover:text-bone">
+            <button onClick={safeClose} disabled={pending} className="mt-3 w-full text-center text-sm text-slate hover:text-bone disabled:opacity-40">
               Cancel
             </button>
           </motion.div>

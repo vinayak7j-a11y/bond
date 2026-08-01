@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function DeleteIdentityModal({
@@ -8,13 +9,30 @@ export function DeleteIdentityModal({
   onConfirm,
   onClose,
   error,
+  pending,
 }: {
   open: boolean;
   label: string;
   onConfirm: () => void;
   onClose: () => void;
   error?: string | null;
+  pending?: boolean;
 }) {
+  function safeClose() {
+    if (pending) return; // don't let the sheet close mid-request
+    onClose();
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") safeClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pending]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -23,7 +41,7 @@ export function DeleteIdentityModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
-          onClick={onClose}
+          onClick={safeClose}
         >
           <motion.div
             initial={{ y: 40, opacity: 0 }}
@@ -44,11 +62,16 @@ export function DeleteIdentityModal({
 
             <button
               onClick={onConfirm}
-              className="w-full rounded-xl border border-red-400/30 bg-red-400/10 px-6 py-3 text-center text-sm font-medium text-red-300 transition hover:bg-red-400/15 active:scale-[0.98]"
+              disabled={pending}
+              className="w-full rounded-xl border border-red-400/30 bg-red-400/10 px-6 py-3 text-center text-sm font-medium text-red-300 transition hover:bg-red-400/15 active:scale-[0.98] disabled:opacity-50"
             >
-              Delete "{label}"
+              {pending ? "Deleting…" : `Delete "${label}"`}
             </button>
-            <button onClick={onClose} className="mt-3 w-full text-center text-sm text-slate hover:text-bone">
+            <button
+              onClick={safeClose}
+              disabled={pending}
+              className="mt-3 w-full text-center text-sm text-slate hover:text-bone disabled:opacity-40"
+            >
               Keep it
             </button>
           </motion.div>
