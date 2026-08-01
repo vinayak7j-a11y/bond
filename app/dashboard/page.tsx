@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { BondPreview } from "@/components/BondPreview";
 import { NewIdentityModal } from "@/components/NewIdentityModal";
@@ -69,11 +69,7 @@ export default function DashboardPage() {
   const [creatingIdentity, setCreatingIdentity] = useState(false);
   const [deletingIdentity, setDeletingIdentity] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     try {
       const res = await fetch("/api/identities");
       const data = await res.json();
@@ -89,7 +85,12 @@ export default function DashboardPage() {
     } catch {
       setLoadError("Couldn't reach the server. Check your connection and try refreshing.");
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   function selectIdentity(identity: Identity) {
     setActiveId(identity.id);
@@ -293,8 +294,8 @@ export default function DashboardPage() {
           <div>
             <p className="mb-6 text-xs text-slate">
               Your accessories always open the same link - bond.app/{username}. Whichever
-              identity is marked "showing now" is what anyone sees when they tap or scan. Switch
-              it any time; every accessory updates instantly, nothing to reprogram. People who've
+              identity is marked &quot;showing now&quot; is what anyone sees when they tap or scan. Switch
+              it any time; every accessory updates instantly, nothing to reprogram. People who&apos;ve
               already saved your contact keep seeing whatever you showed them at the time -
               switching here only changes what new people see.
             </p>

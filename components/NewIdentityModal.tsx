@@ -78,7 +78,7 @@ export function NewIdentityModal({
             </motion.div>
 
             <p className="mb-1 text-center font-mono text-xs uppercase tracking-wide text-slate">New identity</p>
-            <h2 className="mb-5 text-center font-display text-2xl text-bone">Who's this version of you?</h2>
+            <h2 className="mb-5 text-center font-display text-2xl text-bone">Who&apos;s this version of you?</h2>
 
             <input
               autoFocus

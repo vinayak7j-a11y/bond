@@ -52,10 +52,10 @@ export function DeleteIdentityModal({
             className="w-full max-w-sm rounded-t-2xl border border-white/10 bg-surface p-6 sm:rounded-2xl"
           >
             <p className="mb-1 font-mono text-xs uppercase tracking-wide text-slate">Remove identity</p>
-            <h2 className="mb-2 font-display text-2xl text-bone">Delete "{label}"?</h2>
+            <h2 className="mb-2 font-display text-2xl text-bone">Delete &quot;{label}&quot;?</h2>
             <p className="mb-5 text-sm leading-relaxed text-slate">
-              Anyone who already saved this identity's contact keeps their permanent link — this
-              can't be undone here, but their saved copy is unaffected.
+              Anyone who already saved this identity&apos;s contact keeps their permanent link — this
+              can&apos;t be undone here, but their saved copy is unaffected.
             </p>
 
             {error && <p className="mb-3 text-center text-xs text-red-300">{error}</p>}
