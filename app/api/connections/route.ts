@@ -16,79 +16,89 @@ import { getOrCreateUser } from "@/lib/getOrCreateUser";
 //               same browser, /api/pending-connections/claim converts this
 //               into a real Connection — see "Connection Upgrade".
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const {
-    personUsername,
-    personName,
-    personHeadline,
-    personPhoto,
-    identityId,
-    identityShared,
-    meetingContext,
-    meetingSource,
-    anonToken,
-  } = body;
+  try {
+    const body = await req.json();
+    const {
+      personUsername,
+      personName,
+      personHeadline,
+      personPhoto,
+      identityId,
+      identityShared,
+      meetingContext,
+      meetingSource,
+      anonToken,
+    } = body;
 
-  if (!personName) {
-    return NextResponse.json({ error: "personName is required" }, { status: 400 });
-  }
-
-  const { userId: clerkId } = await auth();
-
-  if (!clerkId) {
-    if (!anonToken || !personUsername || !identityId) {
-      return NextResponse.json({ skipped: true, reason: "not signed in, no anon token" }, { status: 200 });
+    if (!personName) {
+      return NextResponse.json({ error: "personName is required" }, { status: 400 });
     }
-    const bondOwner = await prisma.user.findUnique({ where: { username: personUsername } });
-    if (!bondOwner) return NextResponse.json({ skipped: true, reason: "owner not found" }, { status: 200 });
 
-    await prisma.pendingConnection.create({
+    const { userId: clerkId } = await auth();
+
+    if (!clerkId) {
+      if (!anonToken || !personUsername || !identityId) {
+        return NextResponse.json({ skipped: true, reason: "not signed in, no anon token" }, { status: 200 });
+      }
+      const bondOwner = await prisma.user.findUnique({ where: { username: personUsername } });
+      if (!bondOwner) return NextResponse.json({ skipped: true, reason: "owner not found" }, { status: 200 });
+
+      await prisma.pendingConnection.create({
+        data: {
+          anonToken,
+          bondOwnerId: bondOwner.id,
+          identityId,
+          personName,
+          personHeadline: personHeadline ?? null,
+          personPhoto: personPhoto ?? null,
+          personUsername: personUsername ?? null,
+          identityShared: identityShared ?? null,
+          meetingContext: meetingContext ?? null,
+        },
+      });
+
+      return NextResponse.json({ pending: true }, { status: 201 });
+    }
+
+    const owner = await getOrCreateUser();
+    if (!owner) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    const connection = await prisma.connection.create({
       data: {
-        anonToken,
-        bondOwnerId: bondOwner.id,
-        identityId,
+        ownerId: owner.id,
+        identityId: identityId ?? null,
+        personUsername: personUsername ?? null,
         personName,
         personHeadline: personHeadline ?? null,
         personPhoto: personPhoto ?? null,
-        personUsername: personUsername ?? null,
         identityShared: identityShared ?? null,
         meetingContext: meetingContext ?? null,
+        meetingSource: meetingSource ?? "nfc",
       },
     });
 
-    return NextResponse.json({ pending: true }, { status: 201 });
+    return NextResponse.json({ connection }, { status: 201 });
+  } catch (err) {
+    console.error("POST /api/connections failed:", err);
+    return NextResponse.json({ error: "Something went wrong saving that connection." }, { status: 500 });
   }
-
-  const owner = await getOrCreateUser();
-  if (!owner) return NextResponse.json({ error: "User not found" }, { status: 404 });
-
-  const connection = await prisma.connection.create({
-    data: {
-      ownerId: owner.id,
-      identityId: identityId ?? null,
-      personUsername: personUsername ?? null,
-      personName,
-      personHeadline: personHeadline ?? null,
-      personPhoto: personPhoto ?? null,
-      identityShared: identityShared ?? null,
-      meetingContext: meetingContext ?? null,
-      meetingSource: meetingSource ?? "nfc",
-    },
-  });
-
-  return NextResponse.json({ connection }, { status: 201 });
 }
 
 // GET returns the signed-in user's connections list, newest first —
 // powers the dashboard "Connections" view.
 export async function GET() {
-  const owner = await getOrCreateUser();
-  if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const owner = await getOrCreateUser();
+    if (!owner) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const connections = await prisma.connection.findMany({
-    where: { ownerId: owner.id },
-    orderBy: { createdAt: "desc" },
-  });
+    const connections = await prisma.connection.findMany({
+      where: { ownerId: owner.id },
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({ connections });
+    return NextResponse.json({ connections });
+  } catch (err) {
+    console.error("GET /api/connections failed:", err);
+    return NextResponse.json({ error: "Something went wrong loading your connections." }, { status: 500 });
+  }
 }

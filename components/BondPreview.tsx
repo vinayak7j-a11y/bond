@@ -12,6 +12,7 @@ import { FieldDraft, ACTION_TYPES } from "@/lib/fieldTypes";
 export function BondPreview({
   label,
   name,
+  photoUrl,
   fields,
   username,
   slug,
@@ -19,6 +20,7 @@ export function BondPreview({
 }: {
   label: string;
   name: string;
+  photoUrl?: string | null;
   fields: FieldDraft[];
   username: string;
   slug: string;
@@ -77,9 +79,14 @@ export function BondPreview({
               className="relative flex flex-col items-center text-center"
             >
               <div className="mb-4 h-16 w-16 overflow-hidden rounded-full border border-brass/40 bg-surface">
-                <div className="flex h-full w-full items-center justify-center font-display text-xl text-brass">
-                  {(name || "?").charAt(0).toUpperCase()}
-                </div>
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoUrl} alt={name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center font-display text-xl text-brass">
+                    {(name || "?").charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
 
               <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.28em] text-brass/80">
@@ -101,9 +108,9 @@ export function BondPreview({
                 </div>
                 {actions.length > 0 && (
                   <div className="grid grid-cols-3 gap-1.5">
-                    {actions.map((a) => (
+                    {actions.map((a, i) => (
                       <div
-                        key={a.label}
+                        key={`${a.label}-${i}`}
                         className="rounded-md border border-white/10 bg-surface py-2 text-center text-[10px] text-bone"
                       >
                         {a.label}
@@ -115,8 +122,8 @@ export function BondPreview({
 
               {details.length > 0 && (
                 <div className="mt-4 w-full space-y-1.5 text-left">
-                  {details.map((d) => (
-                    <div key={d.label} className="rounded-md border border-white/10 bg-surface px-3 py-1.5">
+                  {details.map((d, i) => (
+                    <div key={`${d.label}-${i}`} className="rounded-md border border-white/10 bg-surface px-3 py-1.5">
                       <p className="font-mono text-[8px] uppercase tracking-wide text-brass/70">{d.label}</p>
                       <p className="mt-0.5 text-[10px] text-bone/80">{d.value}</p>
                     </div>
@@ -126,8 +133,8 @@ export function BondPreview({
 
               {links.length > 0 && (
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {links.map((l) => (
-                    <span key={l.label} className="font-mono text-[9px] text-slate">
+                  {links.map((l, i) => (
+                    <span key={`${l.label}-${i}`} className="font-mono text-[9px] text-slate">
                       {l.label}
                     </span>
                   ))}

@@ -11,41 +11,47 @@ import { getOrCreateUser } from "@/lib/getOrCreateUser";
 // Upgrade" feature: nothing about a pre-signup tap is lost just because
 // they didn't have an account yet at that moment.
 export async function POST(req: NextRequest) {
-  const user = await getOrCreateUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const user = await getOrCreateUser();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { anonToken } = await req.json();
-  if (!anonToken) return NextResponse.json({ claimed: 0 });
+    const { anonToken } = await req.json();
+    if (!anonToken) return NextResponse.json({ claimed: 0 });
 
-  const pending = await prisma.pendingConnection.findMany({ where: { anonToken } });
-  if (pending.length === 0) return NextResponse.json({ claimed: 0 });
+    const pending = await prisma.pendingConnection.findMany({ where: { anonToken } });
+    if (pending.length === 0) return NextResponse.json({ claimed: 0 });
 
-  let claimed = 0;
-  for (const p of pending) {
     // Skip the degenerate case where someone's own anonymous browsing of
     // their own Bond somehow got queued — shouldn't normally happen, but
     // cheap to guard against.
-    if (p.bondOwnerId === user.id) continue;
+    const claimable = pending.filter((p) => p.bondOwnerId !== user.id);
 
-    await prisma.connection.create({
-      data: {
-        ownerId: user.id,
-        identityId: p.identityId,
-        personUsername: p.personUsername,
-        personName: p.personName,
-        personHeadline: p.personHeadline,
-        personPhoto: p.personPhoto,
-        identityShared: p.identityShared,
-        meetingContext: p.meetingContext,
-        meetingSource: "nfc",
-        createdAt: p.createdAt, // preserve the real moment they met, not today
-      },
-    });
+    // One transaction for every create + the delete: if anything fails
+    // partway, nothing commits, so a retry can't double-claim rows that
+    // already succeeded on a previous attempt.
+    await prisma.$transaction([
+      ...claimable.map((p) =>
+        prisma.connection.create({
+          data: {
+            ownerId: user.id,
+            identityId: p.identityId,
+            personUsername: p.personUsername,
+            personName: p.personName,
+            personHeadline: p.personHeadline,
+            personPhoto: p.personPhoto,
+            identityShared: p.identityShared,
+            meetingContext: p.meetingContext,
+            meetingSource: "nfc",
+            createdAt: p.createdAt, // preserve the real moment they met, not today
+          },
+        })
+      ),
+      prisma.pendingConnection.deleteMany({ where: { anonToken } }),
+    ]);
 
-    claimed += 1;
+    return NextResponse.json({ claimed: claimable.length });
+  } catch (err) {
+    console.error("POST /api/pending-connections/claim failed:", err);
+    return NextResponse.json({ error: "Something went wrong claiming your pending connections." }, { status: 500 });
   }
-
-  await prisma.pendingConnection.deleteMany({ where: { anonToken } });
-
-  return NextResponse.json({ claimed });
 }
