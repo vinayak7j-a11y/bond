@@ -100,11 +100,15 @@ export async function loadActiveIdentity(username: string) {
 // bond.app/username/slug — a specific identity's permanent URL. This is
 // what saved contacts link to, so it never changes regardless of what the
 // owner's active identity becomes later. No account needed to resolve it.
+//
+// Single query via relation filtering (user: { username }) instead of a
+// separate user lookup followed by a separate identity lookup — halves
+// the database round-trips for what's likely the most-hit route once
+// people actually have saved contacts, since every tap of an already-saved
+// contact lands here rather than on the "active identity" route.
 export async function loadIdentityBySlug(username: string, slug: string) {
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user) return null;
-  return prisma.identity.findUnique({
-    where: { userId_slug: { userId: user.id, slug } },
+  return prisma.identity.findFirst({
+    where: { slug, user: { username } },
     include: { fields: { orderBy: { order: "asc" } } },
   });
 }

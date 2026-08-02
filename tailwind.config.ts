@@ -31,11 +31,16 @@ const config: Config = {
           "0%, 100%": { opacity: "0.35" },
           "50%": { opacity: "0.6" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
       },
       animation: {
         "pulse-ring": "pulse-ring 1.1s cubic-bezier(0.4,0,0.2,1)",
         "ring-stamp": "ring-stamp 0.6s cubic-bezier(0.22,1,0.36,1)",
         "ambient-glow": "ambient-glow 4s ease-in-out infinite",
+        shimmer: "shimmer 1.6s ease-in-out infinite",
       },
     },
   },

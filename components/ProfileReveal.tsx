@@ -62,6 +62,24 @@ export function ProfileReveal({
       variants={container}
       className="relative flex flex-col items-center px-6 pt-14 pb-10"
     >
+      {/* A brief room-filling light pulse right as the seal lands — makes
+          the moment feel like it fills the whole screen, not just the
+          medallion. Fixed positioning so it covers the full viewport
+          regardless of scroll, fires once, gone in half a second. */}
+      {!reduceMotion && (
+        <motion.div
+          aria-hidden
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.35, 0] }}
+          transition={{ duration: 0.55, delay: 0.32, ease: "easeOut" }}
+          className="pointer-events-none fixed inset-0 z-10"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 30%, rgba(201,161,92,0.5), transparent 55%)",
+          }}
+        />
+      )}
+
       {/* Ambient halo behind the medallion — barely perceptible, gives the
           impression photo weight/presence without reading as a "glow effect." */}
       <div
