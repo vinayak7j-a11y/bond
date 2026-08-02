@@ -16,6 +16,25 @@
   outline-offset: 2px;
 }
 
+/* Chrome/Safari paint autofilled inputs with their own forced white/yellow
+   background that normal background-color cannot override — this is a
+   browser-level behavior, not a styling bug on our end. The only real fix
+   is to fake the background with an inset box-shadow instead, and force
+   the text color so autofilled text stays legible on our dark theme. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0E0F11 inset !important;
+  box-shadow: 0 0 0 1000px #0E0F11 inset !important;
+  -webkit-text-fill-color: #F7F5F1 !important;
+  caret-color: #F7F5F1;
+  transition: background-color 999999s ease-in-out 0s;
+}
+
 /* Barely-there paper grain so the near-black background reads as a
    material (pressed card stock) rather than a flat digital void.
    Kept to ~3% opacity — meant to be felt, not seen. */
