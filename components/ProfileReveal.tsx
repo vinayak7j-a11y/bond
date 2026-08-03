@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { ReactNode } from "react";
+import { HandshakeIntro } from "@/components/HandshakeIntro";
 
 // The signature moment: the profile doesn't "load," it's stamped — like a
 // signet ring pressing into wax. The photo recedes slightly, a brass ring
@@ -91,6 +92,12 @@ export function ProfileReveal({
         variants={item}
         className="relative mb-6 h-28 w-28 shrink-0 rounded-full"
       >
+        {/* Plays first, covering the medallion like a curtain — by the time
+            it fades away, the stamp/particles/photo underneath have already
+            settled, so lifting it reveals an already-sealed result rather
+            than two disconnected sequences competing for attention. */}
+        <HandshakeIntro />
+
         {/* Fine brass dust scattering outward as the seal makes contact —
             reinforces "impact" rather than just a glow fading in. */}
         {Array.from({ length: particleCount }).map((_, i) => {
