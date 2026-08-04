@@ -15,6 +15,26 @@ export function BondFooter({ username, displayPath = "" }: { username: string; d
           Create your own Bond →
         </a>
       </p>
+      <p className="mt-2 text-[10px] text-slate/40">
+        Icons by{" "}
+        <a
+          href="https://github.com/twitter/twemoji"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          Twemoji
+        </a>
+        , licensed under{" "}
+        <a
+          href="https://creativecommons.org/licenses/by/4.0/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          CC BY 4.0
+        </a>
+      </p>
     </footer>
   );
 }
