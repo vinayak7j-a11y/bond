@@ -255,30 +255,39 @@ export default function DashboardPage() {
           <motion.button
             key={i.id}
             onClick={() => selectIdentity(i)}
-            whileTap={{ scale: 0.97 }}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            whileTap={{ scale: 0.94 }}
+            whileHover={{ y: -3 }}
+            initial={{ opacity: 0, y: 16, scale: 0.9, rotate: idx % 2 === 0 ? -3 : 3 }}
+            animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+            transition={{ delay: idx * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             aria-pressed={i.id === activeId}
-            className={`relative flex w-28 shrink-0 flex-col items-center gap-2 overflow-hidden rounded-xl border p-3 transition ${
+            className={`relative flex w-28 shrink-0 flex-col items-center gap-2 overflow-hidden rounded-xl border p-3 transition-colors ${
               i.id === activeId
                 ? "border-brass bg-brass/5"
                 : "border-white/10 hover:border-white/25"
             }`}
           >
             {i.id === activeId && (
-              <motion.span
-                layoutId="card-highlight"
-                transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                className="absolute inset-0 rounded-xl bg-brass/5"
-              />
+              <>
+                <motion.span
+                  layoutId="card-highlight"
+                  transition={{ type: "spring", stiffness: 500, damping: 32 }}
+                  className="absolute inset-0 rounded-xl bg-brass/5"
+                />
+                {/* A soft continuous pulse so the active card reads as
+                    "alive" rather than a static selected state. */}
+                <motion.span
+                  aria-hidden
+                  animate={{ opacity: [0.15, 0.35, 0.15] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                  className="pointer-events-none absolute inset-0 rounded-xl border border-brass/40"
+                />
+              </>
             )}
             {justSwitchedId === i.id && (
-              <motion.span
-                initial={{ opacity: 0.8, boxShadow: "0 0 0 0 rgba(201,161,92,0.5)" }}
-                animate={{ opacity: 0, boxShadow: "0 0 0 8px rgba(201,161,92,0)" }}
-                transition={{ duration: 0.5 }}
-                className="pointer-events-none absolute inset-0 rounded-xl"
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-xl animate-ring-stamp"
               />
             )}
             <div className="relative h-12 w-12 overflow-hidden rounded-full border border-brass/30 bg-ink">
@@ -297,13 +306,18 @@ export default function DashboardPage() {
             </div>
           </motion.button>
         ))}
-        <button
+        <motion.button
           onClick={() => setNewIdentityOpen(true)}
-          className="flex w-28 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 p-3 text-slate transition hover:border-brass/50 hover:text-brass"
+          whileTap={{ scale: 0.94 }}
+          whileHover={{ y: -3, borderColor: "rgba(201,161,92,0.5)" }}
+          initial={{ opacity: 0, y: 16, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: identities.length * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="flex w-28 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 p-3 text-slate transition-colors hover:text-brass"
         >
           <span className="text-xl leading-none">+</span>
           <span className="text-[10px]">New identity</span>
-        </button>
+        </motion.button>
       </div>
 
       {active && (
