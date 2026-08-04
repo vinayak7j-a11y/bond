@@ -57,6 +57,7 @@ export default function DashboardPage() {
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [justAddedCid, setJustAddedCid] = useState<string | null>(null);
   const [fields, setFields] = useState<LocalField[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -249,43 +250,59 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="mb-8 flex flex-wrap gap-2">
-        {identities.map((i) => (
+      <div className="mb-8 -mx-6 flex gap-3 overflow-x-auto px-6 pb-2">
+        {identities.map((i, idx) => (
           <motion.button
             key={i.id}
             onClick={() => selectIdentity(i)}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.97 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             aria-pressed={i.id === activeId}
-            className={`relative rounded-full border px-3 py-1.5 text-xs transition ${
-              i.id === activeId ? "border-brass text-brass" : "border-white/10 text-slate hover:text-bone"
+            className={`relative flex w-28 shrink-0 flex-col items-center gap-2 overflow-hidden rounded-xl border p-3 transition ${
+              i.id === activeId
+                ? "border-brass bg-brass/5"
+                : "border-white/10 hover:border-white/25"
             }`}
           >
             {i.id === activeId && (
               <motion.span
-                layoutId="pill-highlight"
+                layoutId="card-highlight"
                 transition={{ type: "spring", stiffness: 500, damping: 32 }}
-                className="absolute inset-0 rounded-full bg-brass/10"
+                className="absolute inset-0 rounded-xl bg-brass/5"
               />
             )}
             {justSwitchedId === i.id && (
               <motion.span
                 initial={{ opacity: 0.8, boxShadow: "0 0 0 0 rgba(201,161,92,0.5)" }}
-                animate={{ opacity: 0, boxShadow: "0 0 0 6px rgba(201,161,92,0)" }}
+                animate={{ opacity: 0, boxShadow: "0 0 0 8px rgba(201,161,92,0)" }}
                 transition={{ duration: 0.5 }}
-                className="pointer-events-none absolute inset-0 rounded-full"
+                className="pointer-events-none absolute inset-0 rounded-xl"
               />
             )}
-            <span className="relative">
-              {i.label || "Untitled"}
-              {i.isDefault && " (showing now)"}
-            </span>
+            <div className="relative h-12 w-12 overflow-hidden rounded-full border border-brass/30 bg-ink">
+              {i.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={i.photoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center font-display text-lg text-brass">
+                  {(i.label || i.name || "?").charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="relative w-full text-center">
+              <p className="truncate text-xs font-medium text-bone">{i.label || "Untitled"}</p>
+              {i.isDefault && <p className="mt-0.5 text-[9px] uppercase tracking-wide text-brass">Showing now</p>}
+            </div>
           </motion.button>
         ))}
         <button
           onClick={() => setNewIdentityOpen(true)}
-          className="rounded-full border border-dashed border-white/20 px-3 py-1.5 text-xs text-slate transition hover:border-brass/50 hover:text-brass"
+          className="flex w-28 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/20 p-3 text-slate transition hover:border-brass/50 hover:text-brass"
         >
-          + New identity
+          <span className="text-xl leading-none">+</span>
+          <span className="text-[10px]">New identity</span>
         </button>
       </div>
 
@@ -310,13 +327,44 @@ export default function DashboardPage() {
               >
             <section className="mb-8">
               <h2 className="mb-3 font-mono text-xs uppercase tracking-wide text-slate">Identity</h2>
-              <div className="space-y-3">
+              <div className="mb-4 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.focus()}
+                  className="group relative h-20 w-20 overflow-hidden rounded-full border border-brass/30 bg-ink transition hover:border-brass/60"
+                >
+                  {photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center font-display text-2xl text-brass">
+                      {(name || "?").charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-ink/0 text-[10px] font-medium text-bone opacity-0 transition-opacity group-hover:bg-ink/60 group-hover:opacity-100">
+                    Change
+                  </span>
+                  <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-ink bg-brass text-ink transition-transform group-hover:scale-110">
+                    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+                      <path
+                        d="M2.5 6a1 1 0 0 1 1-1h1.2l.6-1.1a1 1 0 0 1 .88-.5h3.64a1 1 0 0 1 .88.5l.6 1.1h1.2a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1V6z"
+                        stroke="currentColor"
+                        strokeWidth="1.2"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="8" cy="8.8" r="2.1" stroke="currentColor" strokeWidth="1.2" />
+                    </svg>
+                  </span>
+                </button>
                 <input
+                  ref={photoInputRef}
                   value={photoUrl}
                   onChange={(e) => setPhotoUrl(e.target.value)}
-                  placeholder="Photo URL (optional — paste a direct image link)"
-                  className="w-full rounded-lg border border-white/10 bg-surface px-4 py-3 text-sm text-bone placeholder:text-slate/60 focus:border-brass/50"
+                  placeholder="Paste a direct image link"
+                  className="w-full max-w-[220px] rounded-lg border border-white/10 bg-surface px-3 py-1.5 text-center text-xs text-bone placeholder:text-slate/60 focus:border-brass/50"
                 />
+              </div>
+              <div className="space-y-3">
                 <input
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
