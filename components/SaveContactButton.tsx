@@ -29,17 +29,23 @@ export function SaveContactButton({
   const [justStamped, setJustStamped] = useState(false);
   const [passCopied, setPassCopied] = useState(false);
 
-  async function handleSave() {
-    // 1. Trigger the native "add contact" sheet immediately — this is the
-    //    part that has to feel instant. No network round-trip in the path.
-    const res = await fetch(`/api/vcard/${username}?identity=${identitySlug}`);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${name.replace(/\s+/g, "_")}.vcf`;
-    link.click();
-    URL.revokeObjectURL(url);
+  function handleSave() {
+    // Open the vCard endpoint directly in a new tab, with no `download`
+    // attribute involved anywhere — this lets each browser apply its own
+    // native handling for the text/vcard MIME type instead of being told
+    // to silently force-save it as a generic file.
+    //
+    // iOS already showed its native "Add Contact" sheet under the old
+    // fetch+blob+forced-download approach, because iOS recognizes .vcf
+    // files at the OS level even when force-downloaded. Android's download
+    // manager took that `download` attribute literally instead: silently
+    // saved to Downloads, no Contacts prompt. Removing it lets Chrome on
+    // Android offer its own "Open with Contacts" handling instead.
+    //
+    // This MUST be the very first synchronous line in the handler — no
+    // `await` before it — or mobile browsers stop treating this as a
+    // user-initiated action and block it as an unrequested popup.
+    window.open(`/api/vcard/${username}?identity=${identitySlug}`, "_blank");
 
     setSaved(true);
     // Replay the same seal-stamp moment from the profile reveal — this is
