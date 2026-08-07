@@ -7,6 +7,7 @@ import { NewIdentityModal } from "@/components/NewIdentityModal";
 import { DeleteIdentityModal } from "@/components/DeleteIdentityModal";
 import { FieldDraft, FieldType, FIELD_TYPES, FIELD_TYPE_META } from "@/lib/fieldTypes";
 import { FieldTypeIcon } from "@/components/FieldTypeIcon";
+import { OnThisDayWidget } from "@/components/OnThisDayWidget";
 
 type ServerField = FieldDraft & { id: string };
 
@@ -249,6 +250,8 @@ export default function DashboardPage() {
           {loadError}
         </div>
       )}
+
+      <OnThisDayWidget />
 
       <div className="mb-8 -mx-6 flex gap-3 overflow-x-auto px-6 pb-2">
         {identities.map((i, idx) => (

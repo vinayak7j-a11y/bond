@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+
+export const dynamic = "force-dynamic";
 
 type Connection = {
   id: string;
@@ -49,6 +52,19 @@ export default function ConnectionsPage() {
       .then((d) => setConnections(d.connections ?? []))
       .finally(() => setLoading(false));
   }, []);
+
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+
+  // Arrived here via the "On this day" widget — expand that connection's
+  // note and bring it into view instead of leaving the person to scroll
+  // and hunt for it themselves.
+  useEffect(() => {
+    if (!highlightId || loading) return;
+    setExpandedId(highlightId);
+    const el = document.getElementById(`connection-${highlightId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightId, loading, connections]);
 
   const filtered = connections.filter((c) =>
     `${c.personName} ${c.personHeadline ?? ""} ${c.meetingContext ?? ""} ${c.note ?? ""}`
@@ -167,6 +183,7 @@ function ConnectionRow({
       initial="hidden"
       animate="visible"
       exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+      id={`connection-${c.id}`}
       className="overflow-hidden rounded-lg border border-white/10 bg-surface"
     >
       <button
