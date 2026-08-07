@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-
-export const dynamic = "force-dynamic";
 
 type Connection = {
   id: string;
@@ -40,7 +38,20 @@ function groupLabel(iso: string): string {
   return date.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
 
+// useSearchParams() requires an actual Suspense ancestor in the App
+// Router — not just a "force-dynamic" route config, which does NOT
+// satisfy this requirement (that was tried first and still failed the
+// production build). The default export below is just the boundary;
+// all the real page logic stays in ConnectionsPageInner.
 export default function ConnectionsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ConnectionsPageInner />
+    </Suspense>
+  );
+}
+
+function ConnectionsPageInner() {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
