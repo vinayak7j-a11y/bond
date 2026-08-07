@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useUser } from "@clerk/nextjs";
 import { MeetingContextModal } from "./MeetingContextModal";
+import { ShareBackModal, MyIdentityOption } from "./ShareBackModal";
 import { getAnonToken } from "@/lib/anon";
 
 type Props = {
@@ -28,6 +30,11 @@ export function SaveContactButton({
   const [saved, setSaved] = useState(false);
   const [justStamped, setJustStamped] = useState(false);
   const [passCopied, setPassCopied] = useState(false);
+  const [shareBackOpen, setShareBackOpen] = useState(false);
+  const [myIdentities, setMyIdentities] = useState<MyIdentityOption[]>([]);
+  const [sharedBack, setSharedBack] = useState(false);
+  const [pendingContext, setPendingContext] = useState<string | undefined>(undefined);
+  const { isLoaded, isSignedIn } = useUser();
 
   function handleSave() {
     // Open the vCard endpoint directly in a new tab, with no `download`
@@ -58,6 +65,7 @@ export function SaveContactButton({
 
   async function recordConnection(meetingContext?: string) {
     setModalOpen(false);
+    setPendingContext(meetingContext);
     await fetch("/api/connections", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -76,6 +84,50 @@ export function SaveContactButton({
       // Non-critical path — losing an analytics/timeline write should never
       // block or alarm the visitor mid-save. Fail silently for MVP.
     });
+
+    // Only a signed-in Bond user viewing someone ELSE's profile has
+    // anything of their own to share back — everyone else just quietly
+    // skips this step.
+    if (!isLoaded || !isSignedIn) return;
+    try {
+      const res = await fetch("/api/identities");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.username === username) return; // viewing their own profile
+      const identities: MyIdentityOption[] = (data.identities ?? []).map((i: any) => ({
+        id: i.id,
+        label: i.label,
+        name: i.name,
+        photoUrl: i.photoUrl ?? null,
+      }));
+      if (identities.length === 0) return;
+      setMyIdentities(identities);
+      setShareBackOpen(true);
+    } catch {
+      // Share-back is a bonus step, not the core save — never block or
+      // alarm the visitor if this lookup fails.
+    }
+  }
+
+  async function shareBack(myIdentityId: string) {
+    setShareBackOpen(false);
+    try {
+      const res = await fetch("/api/connections/mutual", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileOwnerUsername: username,
+          myIdentityId,
+          meetingContext: pendingContext ?? null,
+        }),
+      });
+      if (res.ok) {
+        setSharedBack(true);
+        setTimeout(() => setSharedBack(false), 2500);
+      }
+    } catch {
+      // Bonus step — fail silently, the primary save already succeeded.
+    }
   }
 
   async function saveBondPass() {
@@ -135,10 +187,19 @@ export function SaveContactButton({
           {passCopied ? "Link copied ✓" : "+ Save Bond Pass for quick access later"}
         </button>
       )}
+      {sharedBack && (
+        <p className="text-center text-xs text-brass">Shared back ✓ — they&apos;ll see you in their Connections</p>
+      )}
       <MeetingContextModal
         open={modalOpen}
         onSelect={(ctx) => recordConnection(ctx)}
         onSkip={() => recordConnection(undefined)}
+      />
+      <ShareBackModal
+        open={shareBackOpen}
+        identities={myIdentities}
+        onSelect={shareBack}
+        onSkip={() => setShareBackOpen(false)}
       />
     </>
   );
