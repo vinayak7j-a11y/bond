@@ -1,6 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 const OPTIONS = ["Startup Event", "Client", "College", "Friend", "Conference", "Other"];
 
@@ -13,6 +14,19 @@ export function MeetingContextModal({
   onSelect: (context: string) => void;
   onSkip: () => void;
 }) {
+  const reduceMotion = useReducedMotion();
+
+  // Consistent with the identity create/delete modals elsewhere in the
+  // app: Escape closes it, not just tapping the backdrop.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onSkip();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onSkip]);
+
   return (
     <AnimatePresence>
       {open && (
@@ -24,10 +38,10 @@ export function MeetingContextModal({
           onClick={onSkip}
         >
           <motion.div
-            initial={{ y: 40, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            initial={reduceMotion ? { opacity: 0 } : { y: 40, opacity: 0 }}
+            animate={reduceMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+            exit={reduceMotion ? { opacity: 0 } : { y: 20, opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0.15 : 0.3, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-t-2xl border border-white/10 bg-surface p-6 sm:rounded-2xl"
           >

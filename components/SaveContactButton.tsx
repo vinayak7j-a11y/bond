@@ -33,10 +33,16 @@ export function SaveContactButton({
   const [shareBackOpen, setShareBackOpen] = useState(false);
   const [myIdentities, setMyIdentities] = useState<MyIdentityOption[]>([]);
   const [sharedBack, setSharedBack] = useState(false);
+  const [shareBackSubmitting, setShareBackSubmitting] = useState(false);
+  const [shareBackError, setShareBackError] = useState<string | null>(null);
   const [pendingContext, setPendingContext] = useState<string | undefined>(undefined);
   const { isLoaded, isSignedIn } = useUser();
 
   function handleSave() {
+    // Guard against a second tap re-opening a new tab and resetting the
+    // whole meeting-context/share-back flow that's already in motion.
+    if (saved) return;
+
     // Open the vCard endpoint directly in a new tab, with no `download`
     // attribute involved anywhere — this lets each browser apply its own
     // native handling for the text/vcard MIME type instead of being told
@@ -52,7 +58,18 @@ export function SaveContactButton({
     // This MUST be the very first synchronous line in the handler — no
     // `await` before it — or mobile browsers stop treating this as a
     // user-initiated action and block it as an unrequested popup.
-    window.open(`/api/vcard/${username}?identity=${identitySlug}`, "_blank");
+    const win = window.open(`/api/vcard/${username}?identity=${identitySlug}`, "_blank");
+    if (!win) {
+      // window.open returned null — popup blocked, or (more likely in
+      // practice) an in-app webview (e.g. some messaging apps' built-in
+      // browser) that doesn't support real new tabs at all. Fall back to
+      // navigating the current tab directly to the vCard. This does mean
+      // they leave this page and lose the meeting-context/share-back
+      // steps — a real trade-off — but a degraded save that still works
+      // beats a button that silently does nothing.
+      window.location.href = `/api/vcard/${username}?identity=${identitySlug}`;
+      return;
+    }
 
     setSaved(true);
     // Replay the same seal-stamp moment from the profile reveal — this is
@@ -94,7 +111,8 @@ export function SaveContactButton({
       if (!res.ok) return;
       const data = await res.json();
       if (data.username === username) return; // viewing their own profile
-      const identities: MyIdentityOption[] = (data.identities ?? []).map((i: any) => ({
+      type RawIdentity = { id: string; label: string; name: string; photoUrl?: string | null };
+      const identities: MyIdentityOption[] = (data.identities ?? []).map((i: RawIdentity) => ({
         id: i.id,
         label: i.label,
         name: i.name,
@@ -110,7 +128,11 @@ export function SaveContactButton({
   }
 
   async function shareBack(myIdentityId: string) {
-    setShareBackOpen(false);
+    // Guard against a double-tap firing two POSTs and creating two
+    // Connection rows on the other person's account for one real meeting.
+    if (shareBackSubmitting) return;
+    setShareBackSubmitting(true);
+    setShareBackError(null);
     try {
       const res = await fetch("/api/connections/mutual", {
         method: "POST",
@@ -122,11 +144,19 @@ export function SaveContactButton({
         }),
       });
       if (res.ok) {
+        setShareBackOpen(false);
         setSharedBack(true);
         setTimeout(() => setSharedBack(false), 2500);
+      } else {
+        // Leave the sheet open so they can retry or explicitly skip —
+        // silently closing on a real failure would make it look like it
+        // worked when it didn't.
+        setShareBackError("Couldn't share back — you can try again, or skip for now.");
       }
     } catch {
-      // Bonus step — fail silently, the primary save already succeeded.
+      setShareBackError("Couldn't share back — you can try again, or skip for now.");
+    } finally {
+      setShareBackSubmitting(false);
     }
   }
 
@@ -165,9 +195,10 @@ export function SaveContactButton({
     <>
       <motion.button
         onClick={handleSave}
+        disabled={saved}
         whileTap={{ scale: 0.96 }}
         transition={{ duration: 0.15 }}
-        className="relative w-full overflow-hidden rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink"
+        className="relative w-full overflow-hidden rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink disabled:cursor-default"
       >
         {justStamped && (
           <motion.span
@@ -198,6 +229,8 @@ export function SaveContactButton({
       <ShareBackModal
         open={shareBackOpen}
         identities={myIdentities}
+        submitting={shareBackSubmitting}
+        error={shareBackError}
         onSelect={shareBack}
         onSkip={() => setShareBackOpen(false)}
       />

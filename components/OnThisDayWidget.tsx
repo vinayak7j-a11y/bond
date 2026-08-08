@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 type Match = {
@@ -19,32 +19,53 @@ export function OnThisDayWidget() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    let cancelled = false;
     fetch("/api/connections/on-this-day")
       .then((r) => r.json())
-      .then((d) => setMatches(d.matches ?? []))
+      .then((d) => {
+        if (!cancelled) setMatches(d.matches ?? []);
+      })
       .catch(() => {});
+    // Avoids a "set state on an unmounted component" warning if someone
+    // navigates away before this resolves.
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const visible = matches.filter((m) => !dismissed.has(m.id));
   if (visible.length === 0) return null;
 
+  function goTo(id: string) {
+    router.push(`/dashboard/connections?highlight=${id}`);
+  }
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8 }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: reduceMotion ? 0.15 : 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="mb-8 -mx-6 flex gap-3 overflow-x-auto px-6 pb-2"
     >
       <AnimatePresence>
         {visible.map((m) => (
           <motion.div
             key={m.id}
-            layout
-            exit={{ opacity: 0, scale: 0.9 }}
-            onClick={() => router.push(`/dashboard/connections?highlight=${m.id}`)}
-            className="group relative flex w-64 shrink-0 cursor-pointer items-start gap-3 rounded-lg border border-brass/30 bg-gradient-to-br from-brass/10 to-transparent px-4 py-3 text-left"
+            layout={!reduceMotion}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+            onClick={() => goTo(m.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                goTo(m.id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            className="group relative flex w-64 shrink-0 cursor-pointer items-start gap-3 rounded-lg border border-brass/30 bg-gradient-to-br from-brass/10 to-transparent px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brass/60"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-brass/30 bg-ink font-display text-brass">
               {m.personPhoto ? (
