@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Webhook } from "svix";
 import { prisma } from "@/lib/prisma";
+import { safeUsername } from "@/lib/reservedUsernames";
 
 // Configure this URL in the Clerk dashboard (Webhooks → Add Endpoint) for
 // the "user.created" event, with Clerk's "Enable username" sign-up option
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (event.type === "user.created") {
     const { id, username, email_addresses, first_name } = event.data;
     const email = email_addresses?.[0]?.email_address ?? `${id}@bond.app`;
-    const handle = username ?? id.slice(-8); // fallback so signup never hard-fails
+    const handle = safeUsername(username ?? id.slice(-8), id); // fallback so signup never hard-fails
 
     // getOrCreateUser (lib/getOrCreateUser.ts) may already have created this
     // row as a fallback if the browser hit an authenticated API route before

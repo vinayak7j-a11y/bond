@@ -24,6 +24,7 @@ model User {
   connectionsMade Connection[] @relation("Owner") // people this user has met
   pendingConnections PendingConnection[] // interactions from before I had a Bond account, waiting to be claimed
   usernameLocked  Boolean      @default(false) // true once first accessory is activated/ordered
+  tags            Tag[] // physical NFC/QR accessories claimed to this account
 
   // Growth loop: username of whoever's "Create your own Bond" link brought
   // this person here. Plain string, not a FK — we only need it for simple
@@ -183,4 +184,26 @@ model ProfileEvent {
   createdAt DateTime @default(now())
 
   @@index([profileUsername, type])
+}
+
+// A physical accessory (NFC card, keychain, sticker) — manufactured in
+// bulk with nothing but a random, unguessable `code` baked in, NEVER a
+// username. This is what makes bulk manufacturing possible at all: stock
+// gets produced identical and anonymous, then bound to a real account
+// only once someone actually claims it. Unclaimed tags just redirect to
+// a "claim this tag" page instead of a profile.
+//
+// A claimed tag always resolves to whichever identity the owner currently
+// has marked isDefault — same rule as the plain bond.app/username link.
+// There's deliberately no per-tag identity pinning; one tag, one account,
+// whatever that account is currently showing.
+model Tag {
+  id          String    @id @default(cuid())
+  code        String    @unique // short code physically encoded on the accessory
+  claimedById String?
+  claimedBy   User?     @relation(fields: [claimedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now()) // when this code was generated/manufactured
+  claimedAt   DateTime?
+
+  @@index([code])
 }

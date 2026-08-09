@@ -1,5 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { prisma } from "./prisma";
+import { safeUsername } from "./reservedUsernames";
 
 // Webhooks need a publicly reachable URL, which localhost isn't — so in
 // local dev (and as a safety net in production if a webhook delivery ever
@@ -13,7 +14,7 @@ export async function getOrCreateUser() {
   if (existing) return existing;
 
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? `${clerkUser.id}@bond.app`;
-  const handle = clerkUser.username ?? clerkUser.id.slice(-8);
+  const handle = safeUsername(clerkUser.username ?? clerkUser.id.slice(-8), clerkUser.id);
 
   try {
     return await prisma.user.create({
