@@ -10,6 +10,9 @@ const RESERVED_USERNAMES = new Set([
   "sign-in",
   "sign-up",
   "api",
+  "privacy",
+  "terms",
+  "returns",
 ]);
 
 // Falls back to a Clerk-id-derived handle if the requested one collides

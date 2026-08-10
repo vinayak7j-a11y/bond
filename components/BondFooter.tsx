@@ -35,6 +35,15 @@ export function BondFooter({ username, displayPath = "" }: { username: string; d
           CC BY 4.0
         </a>
       </p>
+      <p className="mt-2 text-[10px] text-slate/40">
+        <a href="/privacy" className="hover:underline">
+          Privacy
+        </a>{" "}
+        ·{" "}
+        <a href="/terms" className="hover:underline">
+          Terms
+        </a>
+      </p>
     </footer>
   );
 }
