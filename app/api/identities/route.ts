@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const body = await req.json();
-    const { label, name, templateId } = body;
+    const { label, name, templateId, duplicateFromId } = body;
     if (!label || !name) {
       return NextResponse.json({ error: "label and name are required" }, { status: 400 });
     }
@@ -50,6 +50,31 @@ export async function POST(req: NextRequest) {
       slug = `${slugify(label)}-${suffix}`;
     }
 
+    // Duplicating an identity clones its actual field VALUES, not just a
+    // template shape — but the source identity has to be looked up and
+    // verified server-side rather than trusting whatever field data the
+    // client sends, or anyone could POST arbitrary field content claiming
+    // it came from "duplication."
+    let duplicateFields: { key: string; type: string; label: string; value: string; order: number }[] | undefined;
+    let sourcePhotoUrl: string | null | undefined;
+    if (duplicateFromId) {
+      const source = await prisma.identity.findUnique({
+        where: { id: duplicateFromId },
+        include: { fields: { orderBy: { order: "asc" } } },
+      });
+      if (!source || source.userId !== user.id) {
+        return NextResponse.json({ error: "That identity isn't yours to duplicate." }, { status: 403 });
+      }
+      duplicateFields = source.fields.map((f) => ({
+        key: f.key,
+        type: f.type,
+        label: f.label,
+        value: f.value,
+        order: f.order,
+      }));
+      sourcePhotoUrl = source.photoUrl;
+    }
+
     // A template is just a starting set of empty Field rows the owner can
     // freely edit, reorder, retype, or delete afterward — nothing about it
     // is locked in once the identity exists.
@@ -61,10 +86,13 @@ export async function POST(req: NextRequest) {
         slug,
         label,
         name,
+        photoUrl: sourcePhotoUrl,
         isDefault: existingIdentities.length === 0,
-        fields: template?.fields.length
-          ? { create: template.fields.map((f) => ({ ...f, value: f.value || "" })) }
-          : undefined,
+        fields: duplicateFields
+          ? { create: duplicateFields }
+          : template?.fields.length
+            ? { create: template.fields.map((f) => ({ ...f, value: f.value || "" })) }
+            : undefined,
       },
       include: { fields: { orderBy: { order: "asc" } } },
     });

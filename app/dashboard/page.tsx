@@ -8,6 +8,8 @@ import { DeleteIdentityModal } from "@/components/DeleteIdentityModal";
 import { FieldDraft, FieldType, FIELD_TYPES, FIELD_TYPE_META } from "@/lib/fieldTypes";
 import { FieldTypeIcon } from "@/components/FieldTypeIcon";
 import { OnThisDayWidget } from "@/components/OnThisDayWidget";
+import { MyTagsSection } from "@/components/MyTagsSection";
+import { AnalyticsWidget } from "@/components/AnalyticsWidget";
 
 type ServerField = FieldDraft & { id: string };
 
@@ -70,6 +72,7 @@ export default function DashboardPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [creatingIdentity, setCreatingIdentity] = useState(false);
   const [deletingIdentity, setDeletingIdentity] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -205,6 +208,31 @@ export default function DashboardPage() {
       setCreateError("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setCreatingIdentity(false);
+    }
+  }
+
+  async function duplicateIdentity() {
+    if (!active || duplicating) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch("/api/identities", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: `${active.label} copy`,
+          name: active.name,
+          duplicateFromId: active.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.identity) return; // non-critical action, fail quietly rather than alarm
+      setIdentities((prev) => [...prev, data.identity]);
+      selectIdentity(data.identity);
+    } catch {
+      // Same — duplication is a convenience, not a core action worth a
+      // scary error state if the network hiccups.
+    } finally {
+      setDuplicating(false);
     }
   }
 
@@ -487,11 +515,20 @@ export default function DashboardPage() {
                   Show this instead
                 </button>
               )}
-              {identities.length > 1 && (
-                <button onClick={() => setDeleteOpen(true)} className="text-slate hover:text-red-400">
-                  Delete identity
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={duplicateIdentity}
+                  disabled={duplicating}
+                  className="text-slate hover:text-brass disabled:opacity-50"
+                >
+                  {duplicating ? "Duplicating…" : "Duplicate"}
                 </button>
-              )}
+                {identities.length > 1 && (
+                  <button onClick={() => setDeleteOpen(true)} className="text-slate hover:text-red-400">
+                    Delete identity
+                  </button>
+                )}
+              </div>
             </div>
 
             {username && (
@@ -518,6 +555,9 @@ export default function DashboardPage() {
           />
         </div>
       )}
+
+      <AnalyticsWidget />
+      <MyTagsSection />
 
       <NewIdentityModal
         open={newIdentityOpen}
