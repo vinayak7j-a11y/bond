@@ -8,14 +8,17 @@ import { ClaimTagCard } from "@/components/ClaimTagCard";
 // visitor rather than throwing — same pattern used across the API routes
 // — so this page works whether or not they're signed in yet.
 export default async function ClaimPage({ params }: { params: { code: string } }) {
-  const tag = await prisma.tag.findUnique({ where: { code: params.code } });
+  // Same case-normalization as the /t/[code] resolver — see that file for
+  // why this matters.
+  const code = params.code.toUpperCase();
+  const tag = await prisma.tag.findUnique({ where: { code } });
   if (!tag) notFound();
 
   const user = await getOrCreateUser();
 
   return (
     <ClaimTagCard
-      code={params.code}
+      code={code}
       isSignedIn={!!user}
       alreadyClaimed={!!tag.claimedById}
       isMine={!!user && tag.claimedById === user.id}

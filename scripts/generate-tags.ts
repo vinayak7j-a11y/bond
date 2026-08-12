@@ -55,7 +55,14 @@ async function main() {
     codes.push(code);
   }
 
-  await prisma.tag.createMany({ data: codes.map((code) => ({ code })), skipDuplicates: true });
+  const inserted = await prisma.tag.createMany({ data: codes.map((code) => ({ code })), skipDuplicates: true });
+  if (inserted.count !== codes.length) {
+    console.warn(
+      `WARNING: requested ${codes.length} codes but only ${inserted.count} were inserted — ` +
+        `a generated code must have collided with one already in the database. The CSV below ` +
+        `lists all ${codes.length} anyway; double-check before sending it to a manufacturer.`
+    );
+  }
 
   const rows = ["code,url", ...codes.map((c) => `${c},${domain}/t/${c}`)];
   const filename = `tags-${Date.now()}.csv`;

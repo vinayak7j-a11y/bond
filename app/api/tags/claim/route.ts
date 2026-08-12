@@ -15,8 +15,9 @@ export async function POST(req: NextRequest) {
     const user = await getOrCreateUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { code } = await req.json();
-    if (!code) return NextResponse.json({ error: "code is required" }, { status: 400 });
+    const { code: rawCode } = await req.json();
+    if (!rawCode) return NextResponse.json({ error: "code is required" }, { status: 400 });
+    const code = String(rawCode).toUpperCase(); // same normalization as the page-level lookups
 
     const exists = await prisma.tag.findUnique({ where: { code }, select: { id: true } });
     if (!exists) return NextResponse.json({ error: "Tag not found" }, { status: 404 });
