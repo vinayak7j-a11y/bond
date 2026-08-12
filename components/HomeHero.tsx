@@ -60,6 +60,16 @@ export function HomeHero() {
           </Link>
         </motion.div>
       </motion.div>
+
+      <p className="absolute bottom-6 text-[10px] text-slate/40">
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>{" "}
+        ·{" "}
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+      </p>
     </main>
   );
 }

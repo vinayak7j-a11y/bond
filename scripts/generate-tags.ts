@@ -55,7 +55,7 @@ async function main() {
     codes.push(code);
   }
 
-  await prisma.tag.createMany({ data: codes.map((code) => ({ code })) });
+  await prisma.tag.createMany({ data: codes.map((code) => ({ code })), skipDuplicates: true });
 
   const rows = ["code,url", ...codes.map((c) => `${c},${domain}/t/${c}`)];
   const filename = `tags-${Date.now()}.csv`;

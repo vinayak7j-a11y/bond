@@ -46,7 +46,18 @@ export function ClaimTagCard({
     <main className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
       <p className="mb-3 font-mono text-xs uppercase tracking-widest text-brass">Bond</p>
 
-      {!isSignedIn && (
+      {!isSignedIn && alreadyClaimed && (
+        <>
+          <h1 className="mb-3 max-w-sm font-display text-2xl leading-tight text-bone">
+            This tag has already been claimed
+          </h1>
+          <p className="max-w-xs text-sm text-slate">
+            If you believe this is a mistake, reach out to Bond support.
+          </p>
+        </>
+      )}
+
+      {!isSignedIn && !alreadyClaimed && (
         <>
           <h1 className="mb-3 max-w-sm font-display text-2xl leading-tight text-bone">
             Activate this Bond accessory

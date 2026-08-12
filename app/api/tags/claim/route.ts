@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 
@@ -17,28 +18,43 @@ export async function POST(req: NextRequest) {
     const { code } = await req.json();
     if (!code) return NextResponse.json({ error: "code is required" }, { status: 400 });
 
-    const tag = await prisma.tag.findUnique({ where: { code } });
-    if (!tag) return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+    const exists = await prisma.tag.findUnique({ where: { code }, select: { id: true } });
+    if (!exists) return NextResponse.json({ error: "Tag not found" }, { status: 404 });
 
-    if (tag.claimedById === user.id) {
-      return NextResponse.json({ tag, alreadyMine: true });
-    }
-    if (tag.claimedById) {
+    // Two people tapping/scanning the same unclaimed tag at nearly the same
+    // moment is a real scenario, not a theoretical one — a plain
+    // findUnique-then-update here would let both requests pass a
+    // claimedById-is-null check and the second write would silently
+    // overwrite the first, with BOTH callers wrongly believing they'd
+    // claimed it. updateMany with claimedById: null in the WHERE clause
+    // makes the claim itself atomic: only one request can ever succeed.
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const claim = await tx.tag.updateMany({
+        where: { code, claimedById: null },
+        data: { claimedById: user.id, claimedAt: new Date() },
+      });
+
+      if (claim.count === 0) {
+        const current = await tx.tag.findUnique({ where: { code } });
+        return { claimed: false as const, current };
+      }
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: { usernameLocked: true },
+      });
+      const updatedTag = await tx.tag.findUnique({ where: { code } });
+      return { claimed: true as const, updatedTag };
+    });
+
+    if (!result.claimed) {
+      if (result.current?.claimedById === user.id) {
+        return NextResponse.json({ tag: result.current, alreadyMine: true });
+      }
       return NextResponse.json({ error: "This tag has already been claimed." }, { status: 409 });
     }
 
-    const [updatedTag] = await prisma.$transaction([
-      prisma.tag.update({
-        where: { code },
-        data: { claimedById: user.id, claimedAt: new Date() },
-      }),
-      prisma.user.update({
-        where: { id: user.id },
-        data: { usernameLocked: true },
-      }),
-    ]);
-
-    return NextResponse.json({ tag: updatedTag }, { status: 200 });
+    return NextResponse.json({ tag: result.updatedTag }, { status: 200 });
   } catch (err) {
     console.error("POST /api/tags/claim failed:", err);
     return NextResponse.json({ error: "Something went wrong claiming this tag." }, { status: 500 });
