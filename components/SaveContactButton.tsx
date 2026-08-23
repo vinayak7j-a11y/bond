@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
 import { MeetingContextModal } from "./MeetingContextModal";
 import { ShareBackModal, MyIdentityOption } from "./ShareBackModal";
@@ -37,6 +37,7 @@ export function SaveContactButton({
   const [shareBackError, setShareBackError] = useState<string | null>(null);
   const [pendingContext, setPendingContext] = useState<string | undefined>(undefined);
   const { isLoaded, isSignedIn } = useUser();
+  const reduceMotion = useReducedMotion();
 
   function handleSave() {
     // Guard against a second tap re-opening a new tab and resetting the
@@ -161,7 +162,7 @@ export function SaveContactButton({
   }
 
   async function saveBondPass() {
-    const shareUrl = `https://bond.app/${username}/${identitySlug}`;
+    const shareUrl = `${window.location.origin}/${username}/${identitySlug}`;
     const shareData = {
       title: `${name} · Bond`,
       text: `${name}${headline ? ` — ${headline}` : ""}`,
@@ -196,11 +197,11 @@ export function SaveContactButton({
       <motion.button
         onClick={handleSave}
         disabled={saved}
-        whileTap={{ scale: 0.96 }}
+        whileTap={reduceMotion ? undefined : { scale: 0.96 }}
         transition={{ duration: 0.15 }}
         className="relative w-full overflow-hidden rounded-xl bg-brass px-6 py-4 text-center text-base font-medium text-ink disabled:cursor-default"
       >
-        {justStamped && (
+        {justStamped && !reduceMotion && (
           <motion.span
             initial={{ opacity: 0.6, scale: 0.9 }}
             animate={{ opacity: 0, scale: 1.4 }}
