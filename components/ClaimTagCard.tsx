@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 export function ClaimTagCard({
   code,
@@ -18,6 +18,7 @@ export function ClaimTagCard({
   const [claiming, setClaiming] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
 
   async function claim() {
     if (claiming) return;
@@ -116,7 +117,7 @@ export function ClaimTagCard({
           <motion.button
             onClick={claim}
             disabled={claiming}
-            whileTap={{ scale: 0.96 }}
+            whileTap={reduceMotion ? undefined : { scale: 0.96 }}
             className="rounded-xl bg-brass px-8 py-3 text-sm font-medium text-ink disabled:opacity-60"
           >
             {claiming ? "Activating…" : "Activate this tag"}
