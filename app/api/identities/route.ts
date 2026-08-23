@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "That identity isn't yours to duplicate." }, { status: 403 });
       }
       duplicateFields = source.fields.map((f) => ({
-        key: f.key,
+        key: f.key ?? "",
         type: f.type,
         label: f.label,
         value: f.value,
