@@ -32,11 +32,11 @@ export function ShareBackModal({
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onSkip();
+      if (e.key === "Escape" && !submitting) onSkip();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onSkip]);
+  }, [open, onSkip, submitting]);
 
   return (
     <AnimatePresence>
