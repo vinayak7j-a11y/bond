@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { FieldType } from "@prisma/client";
 import { getOrCreateUser } from "@/lib/getOrCreateUser";
 import { TEMPLATES } from "@/lib/identityTemplates";
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     // verified server-side rather than trusting whatever field data the
     // client sends, or anyone could POST arbitrary field content claiming
     // it came from "duplication."
-    let duplicateFields: { key: string; type: string; label: string; value: string; order: number }[] | undefined;
+    let duplicateFields: { key: string; type: FieldType; label: string; value: string; order: number }[] | undefined;
     let sourcePhotoUrl: string | null | undefined;
     if (duplicateFromId) {
       const source = await prisma.identity.findUnique({
