@@ -27,7 +27,7 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
     QRCode.toCanvas(canvas, url, {
       width: size,
       errorCorrectionLevel: "H",
-      color: { dark: "#0E0F11", light: "#F7F5F1" },
+      color: { dark: "#0E0F11", light: "#F3E9D2" }, // near-black on warm champagne, brand-tinted but still high-contrast
       margin: 3,
     })
       .then(() => {
@@ -38,8 +38,8 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
         const logo = new Image();
         logo.onload = () => {
           if (cancelled) return;
-          const logoSize = size * 0.24;
-          const pad = logoSize * 0.22; // tighter, badge-like quiet zone around the logo
+          const logoSize = size * 0.2;
+          const pad = logoSize * 0.3; // ~32% of QR width total plate, icon fills ~62% of that — a tight, deliberate badge, not a hole
           const plateSize = logoSize + pad * 2;
           const x = (size - logoSize) / 2;
           const y = (size - logoSize) / 2;
