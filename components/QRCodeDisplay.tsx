@@ -28,7 +28,7 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
       width: size,
       margin: 2,
       errorCorrectionLevel: "H",
-      color: { dark: "#C9A15C", light: "#0E0F11" },
+      color: { dark: "#F7F5F1", light: "#0E0F11" },
     })
       .then(() => {
         if (cancelled || !canvas) return;
@@ -38,8 +38,8 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
         const logo = new Image();
         logo.onload = () => {
           if (cancelled) return;
-          const logoSize = size * 0.2;
-          const pad = logoSize * 0.4; // generous quiet zone around the logo
+          const logoSize = size * 0.24;
+          const pad = logoSize * 0.22; // tighter, badge-like quiet zone around the logo
           const plateSize = logoSize + pad * 2;
           const x = (size - logoSize) / 2;
           const y = (size - logoSize) / 2;
@@ -61,7 +61,7 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
             ctx.fillStyle = "#0E0F11";
             ctx.beginPath();
             if (typeof ctx.roundRect === "function") {
-              ctx.roundRect(plateX, plateY, plateSize, plateSize, 10);
+              ctx.roundRect(plateX, plateY, plateSize, plateSize, 14);
             } else {
               ctx.rect(plateX, plateY, plateSize, plateSize);
             }
