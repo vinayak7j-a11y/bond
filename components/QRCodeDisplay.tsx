@@ -49,15 +49,33 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
           // Fully clear the area first — a solid background plate, not a
           // border drawn over existing modules, so nothing from the
           // pattern peeks out from behind the logo's corners.
-          ctx.fillStyle = "#0E0F11";
-          ctx.beginPath();
-          ctx.roundRect(plateX, plateY, plateSize, plateSize, 10);
-          ctx.fill();
-          ctx.strokeStyle = "#C9A15C";
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-
-          ctx.drawImage(logo, x, y, logoSize, logoSize);
+          //
+          // ctx.roundRect is unsupported on some older browsers/WebViews
+          // (pre-Safari 16, pre-Chrome 99) — without a fallback, calling
+          // it there throws inside this onload callback, which sits
+          // outside the outer promise chain's .catch(), so the error
+          // would go uncaught and leave the QR stuck on its loading
+          // skeleton forever with no visible failure. Fall back to a
+          // plain rectangle if roundRect isn't available.
+          try {
+            ctx.fillStyle = "#0E0F11";
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(plateX, plateY, plateSize, plateSize, 10);
+            } else {
+              ctx.rect(plateX, plateY, plateSize, plateSize);
+            }
+            ctx.fill();
+            ctx.strokeStyle = "#C9A15C";
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.drawImage(logo, x, y, logoSize, logoSize);
+          } catch {
+            // Logo plate failed to draw for some reason — the QR pattern
+            // itself is already on the canvas and still fully scannable,
+            // so just skip the logo rather than leaving the whole thing
+            // stuck invisible.
+          }
           setReady(true);
         };
         logo.onerror = () => setReady(true);
@@ -80,6 +98,8 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
         ref={canvasRef}
         width={size}
         height={size}
+        role="img"
+        aria-label="Scan to open this Bond profile"
         className={`rounded-lg transition-opacity ${ready ? "opacity-100" : "opacity-0"}`}
       />
       {!ready && (
