@@ -26,9 +26,9 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
 
     QRCode.toCanvas(canvas, url, {
       width: size,
-      margin: 2,
       errorCorrectionLevel: "H",
-      color: { dark: "#F7F5F1", light: "#0E0F11" },
+      color: { dark: "#0E0F11", light: "#F7F5F1" },
+      margin: 3,
     })
       .then(() => {
         if (cancelled || !canvas) return;
