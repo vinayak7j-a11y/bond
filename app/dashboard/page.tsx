@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { BondPreview } from "@/components/BondPreview";
+import { QRCodeDisplay } from "@/components/QRCodeDisplay";
 import { NewIdentityModal } from "@/components/NewIdentityModal";
 import { DeleteIdentityModal } from "@/components/DeleteIdentityModal";
 import { FieldDraft, FieldType, FIELD_TYPES, FIELD_TYPE_META } from "@/lib/fieldTypes";
@@ -532,13 +533,23 @@ export default function DashboardPage() {
             </div>
 
             {username && (
-              <a
-                href={`/${username}${active.isDefault ? "" : `/${active.slug}`}`}
-                target="_blank"
-                className="mt-4 block text-center text-sm text-slate hover:text-brass"
-              >
-                View this identity live
-              </a>
+              <>
+                <a
+                  href={`/${username}${active.isDefault ? "" : `/${active.slug}`}`}
+                  target="_blank"
+                  className="mt-4 block text-center text-sm text-slate hover:text-brass"
+                >
+                  View this identity live
+                </a>
+                <div className="mt-4 flex justify-center">
+                  <QRCodeDisplay
+                    url={`${typeof window !== "undefined" ? window.location.origin : ""}/${username}${active.isDefault ? "" : `/${active.slug}`}`}
+                  />
+                </div>
+                <p className="mt-2 text-center text-xs text-slate">
+                  No NFC on your phone? Scan this to open the profile instead.
+                </p>
+              </>
             )}
               </motion.div>
             </AnimatePresence>
