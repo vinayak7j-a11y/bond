@@ -542,7 +542,7 @@ export default function DashboardPage() {
                   View this identity live
                 </a>
                 <div className="mt-4 flex justify-center">
-                  <div className="rounded-2xl border border-brass/30 bg-surface p-4">
+                  <div className="rounded-2xl border border-brass/30 p-4">
                     <QRCodeDisplay
                       url={`${typeof window !== "undefined" ? window.location.origin : ""}/${username}${active.isDefault ? "" : `/${active.slug}`}`}
                     />
