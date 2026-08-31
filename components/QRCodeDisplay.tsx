@@ -16,7 +16,11 @@ export function QRCodeDisplay({ url, size = 180 }: { url: string; size?: number 
 
   useEffect(() => {
     let cancelled = false;
-    QRCode.toDataURL(url, { width: size, margin: 1 })
+    QRCode.toDataURL(url, {
+      width: size,
+      margin: 1,
+      color: { dark: "#0E0F11", light: "#F7F5F1" },
+    })
       .then((d) => {
         if (!cancelled) setDataUrl(d);
       })
@@ -45,7 +49,7 @@ export function QRCodeDisplay({ url, size = 180 }: { url: string; size?: number 
       alt="Scan to open this Bond profile"
       width={size}
       height={size}
-      className="rounded-lg bg-white p-2"
+      className="rounded-lg"
     />
   );
 }

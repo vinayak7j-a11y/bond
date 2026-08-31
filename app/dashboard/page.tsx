@@ -542,9 +542,11 @@ export default function DashboardPage() {
                   View this identity live
                 </a>
                 <div className="mt-4 flex justify-center">
-                  <QRCodeDisplay
-                    url={`${typeof window !== "undefined" ? window.location.origin : ""}/${username}${active.isDefault ? "" : `/${active.slug}`}`}
-                  />
+                  <div className="rounded-2xl border border-brass/30 bg-surface p-4">
+                    <QRCodeDisplay
+                      url={`${typeof window !== "undefined" ? window.location.origin : ""}/${username}${active.isDefault ? "" : `/${active.slug}`}`}
+                    />
+                  </div>
                 </div>
                 <p className="mt-2 text-center text-xs text-slate">
                   No NFC on your phone? Scan this to open the profile instead.
