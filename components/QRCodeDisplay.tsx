@@ -5,12 +5,15 @@ import QRCode from "qrcode";
 
 // Renders a scannable, theme-matched QR code with a centered Bond mark —
 // the fallback path for any visitor whose phone lacks NFC hardware
-// entirely (a real, confirmed gap, not theoretical). Drawn on canvas
-// rather than a plain <img> specifically so the brand icon can be
-// composited on top. Error-correction is forced to "H" (~30% tolerance)
-// BEFORE adding the logo — covering the center of a lower-tier QR with
-// an image can make it unreadable; at H-level, a small centered logo is
-// safely within the code's built-in redundancy.
+// entirely (a real, confirmed gap, not theoretical). Drawn on canvas so
+// the brand icon can be composited cleanly on top with real breathing
+// room around it, rather than sitting directly over the pattern.
+//
+// Modules are brass-gold on a near-black background — a real branded
+// look, not just a near-white/near-black stand-in for black/white. This
+// trades some contrast versus pure black/white, so error correction is
+// forced to "H" (~30% tolerance) to keep it reliably scannable despite
+// both the lower contrast and the center logo cutout.
 export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -23,12 +26,9 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
 
     QRCode.toCanvas(canvas, url, {
       width: size,
-      margin: 1,
+      margin: 2,
       errorCorrectionLevel: "H",
-      // Inverted, theme-matched: light marks on a dark surface instead of
-      // the default black-on-white — blends into the dashboard's dark UI
-      // instead of sitting on it as a stark white square.
-      color: { dark: "#F7F5F1", light: "#17181B" },
+      color: { dark: "#C9A15C", light: "#0E0F11" },
     })
       .then(() => {
         if (cancelled || !canvas) return;
@@ -38,23 +38,29 @@ export function QRCodeDisplay({ url, size = 220 }: { url: string; size?: number 
         const logo = new Image();
         logo.onload = () => {
           if (cancelled) return;
-          const logoSize = size * 0.22;
+          const logoSize = size * 0.2;
+          const pad = logoSize * 0.4; // generous quiet zone around the logo
+          const plateSize = logoSize + pad * 2;
           const x = (size - logoSize) / 2;
           const y = (size - logoSize) / 2;
-          // Small brass-bordered plate behind the logo so it reads as an
-          // intentional badge sitting on the code, not a rendering glitch.
-          const pad = logoSize * 0.18;
-          ctx.fillStyle = "#17181B";
+          const plateX = (size - plateSize) / 2;
+          const plateY = (size - plateSize) / 2;
+
+          // Fully clear the area first — a solid background plate, not a
+          // border drawn over existing modules, so nothing from the
+          // pattern peeks out from behind the logo's corners.
+          ctx.fillStyle = "#0E0F11";
           ctx.beginPath();
-          ctx.roundRect(x - pad, y - pad, logoSize + pad * 2, logoSize + pad * 2, 8);
+          ctx.roundRect(plateX, plateY, plateSize, plateSize, 10);
           ctx.fill();
           ctx.strokeStyle = "#C9A15C";
           ctx.lineWidth = 1.5;
           ctx.stroke();
+
           ctx.drawImage(logo, x, y, logoSize, logoSize);
           setReady(true);
         };
-        logo.onerror = () => setReady(true); // QR itself still renders fine without the logo
+        logo.onerror = () => setReady(true);
         logo.src = "/icons/icon-512.png";
       })
       .catch(() => {
