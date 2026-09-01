@@ -29,9 +29,22 @@ export function MyTagsSection() {
     };
   }, []);
 
+  // Mirrors scripts/generate-tags.ts exactly — same alphabet, same length —
+  // so an obviously malformed code (wrong length, or a character that was
+  // deliberately excluded because it's easy to misread off a printed tag)
+  // gets caught instantly here, instead of the person waiting through a
+  // full page navigation to /claim/CODE only to hit a 404 there.
+  const CODE_PATTERN = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/;
+  const [codeError, setCodeError] = useState<string | null>(null);
+
   function goActivate() {
     const code = manualCode.trim().toUpperCase();
     if (!code) return;
+    if (!CODE_PATTERN.test(code)) {
+      setCodeError("That doesn't look like a valid accessory code — check for typos.");
+      return;
+    }
+    setCodeError(null);
     // Reuses the existing claim page rather than re-implementing claim
     // logic here — that page already handles every state (not found,
     // already claimed, already yours) correctly.
@@ -73,7 +86,7 @@ export function MyTagsSection() {
       <div className="flex gap-2">
         <input
           value={manualCode}
-          onChange={(e) => setManualCode(e.target.value)}
+          onChange={(e) => { setManualCode(e.target.value); setCodeError(null); }}
           onKeyDown={(e) => e.key === "Enter" && goActivate()}
           placeholder="Enter accessory code"
           className="flex-1 rounded-lg border border-white/10 bg-surface px-4 py-2.5 text-sm text-bone placeholder:text-slate/60 focus:border-brass/50"
@@ -86,6 +99,7 @@ export function MyTagsSection() {
           Activate
         </button>
       </div>
+      {codeError && <p className="mt-2 text-xs text-red-300">{codeError}</p>}
     </section>
   );
 }
